@@ -58,7 +58,42 @@ FoodShieldAI/
 
 ## Getting Started
 
-*Coming soon — see [PROJECT_TRACKING.md](./PROJECT_TRACKING.md) for current status.*
+### Prerequisites
+- Python 3.11+
+- Node.js 18+
+- PostgreSQL, Redis, MinIO (or use Docker Compose)
+
+### Setup
+
+```bash
+# Clone & enter
+git clone https://github.com/your-org/foodshield-ai.git
+cd foodshield-ai
+
+# Backend
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\Activate.ps1
+pip install -r backend/requirements.txt
+pip install -e ".[dev]"
+
+# Environment
+cp .env.example .env
+# Edit .env with your database/redis/storage credentials
+
+# Run
+make dev             # start API on :8000
+make lint            # ruff check
+make format          # ruff format
+make typecheck       # mypy
+make test            # pytest
+
+# Frontend
+cd frontend
+npm install
+npm run dev          # starts on :3000
+```
+
+See [PROJECT_TRACKING.md](./PROJECT_TRACKING.md) for current status and [CODING_STANDARDS.md](./CODING_STANDARDS.md) for development conventions.
 
 ---
 

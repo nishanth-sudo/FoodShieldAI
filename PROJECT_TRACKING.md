@@ -28,9 +28,9 @@ This file tracks the complete development progress of the FoodShield AI system. 
 | 1.3 | Create PROJECT_TRACKING.md | ✅ | 2026-07-27 | This file |
 | 1.4 | Create expanded high-level architecture doc | ✅ | 2026-07-27 | Included in `docs/high-level-architecture.md` |
 | 1.5 | Create README.md with project overview | ✅ | 2026-07-27 | |
-| 1.6 | Initialize Git repository | ⏳ | | |
-| 1.7 | Set up root configuration files (pyproject.toml, requirements.txt) | ⏳ | | |
-| 1.8 | Define coding standards & conventions | ⏳ | | |
+| 1.6 | Initialize Git repository | ✅ | 2026-07-28 | Git init, .gitignore, .gitattributes, initial commit with all modules |
+| 1.7 | Set up root configuration files (pyproject.toml, .env.example) | ✅ | 2026-07-28 | pyproject.toml (ruff, mypy, pytest), .env.example, Makefile |
+| 1.8 | Define coding standards & conventions | ✅ | 2026-07-28 | CODING_STANDARDS.md (Python, TS, Git, pre-commit conventions) |
 
 ## Phase 2: Backend API (FastAPI)
 
@@ -141,7 +141,7 @@ This file tracks the complete development progress of the FoodShield AI system. 
 
 | Phase | Total Tasks | Completed | In Progress | Pending |
 |-------|------------|-----------|-------------|---------|
-| 1. Foundation & Architecture | 8 | 5 | 0 | 3 |
+| 1. Foundation & Architecture | 8 | 8 | 0 | 0 |
 | 2. Backend API | 10 | 10 | 0 | 0 |
 | 3. AI Engine | 12 | 7 | 0 | 5 |
 | 4. Frontend | 8 | 8 | 0 | 0 |
