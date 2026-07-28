@@ -1,0 +1,39 @@
+name: FoodShield AI CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r backend/requirements.txt
+      - run: pytest tests/unit --cov=backend
+
+  test-ai-engine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r ai-engine/requirements.txt
+      - run: pytest tests/unit --cov=ai-engine
+
+  build-and-deploy:
+    needs: [test-backend, test-ai-engine]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f infrastructure/docker/Dockerfile.api -t foodshield-api .
+      - run: docker build -f infrastructure/docker/Dockerfile.ai -t foodshield-ai .
+      # TODO: Push to container registry
+      # TODO: Deploy to Kubernetes
