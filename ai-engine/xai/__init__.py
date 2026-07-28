@@ -1,8 +1,3 @@
-"""Explainable AI Module
+from ai_engine.xai.explainer import XAIExplainer
 
-Generates visual explanations for model predictions:
-- Grad-CAM heatmaps
-- LIME explanations
-- SHAP feature importance
-- Overlay visualizations on original images
-"""
+__all__ = ["XAIExplainer"]

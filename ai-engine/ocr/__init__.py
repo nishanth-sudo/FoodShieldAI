@@ -1,6 +1,3 @@
-"""OCR Module
+from ai_engine.ocr.extractor import LabelTextExtractor, FIELD_PATTERNS
 
-Extracts textual information from food product labels:
-- Product name, brand, ingredients, expiry date, nutritional info
-- Backends: PaddleOCR, TrOCR, Tesseract
-"""
+__all__ = ["LabelTextExtractor", "FIELD_PATTERNS"]

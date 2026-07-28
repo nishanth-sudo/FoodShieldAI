@@ -58,9 +58,9 @@ This file tracks the complete development progress of the FoodShield AI system. 
 | 3.5 | Packaging Defect Detection model | ✅ | 2026-07-27 | PackagingDefectDetector (YOLOv8), 8 defect classes, dummy fallback |
 | 3.6 | Contamination Risk Assessment model | ✅ | 2026-07-27 | ContaminationRiskAssessor, multi-label (10 categories), sigmoid thresholding |
 | 3.7 | Shelf-Life Prediction model | ✅ | 2026-07-27 | ShelfLifePredictor, visual+label fusion, regression + freshness category |
-| 3.8 | OCR module (label extraction) | ⏳ | | |
-| 3.9 | Explainable AI (XAI) module | ⏳ | | |
-| 3.10 | LLM-based Report Generation | ⏳ | | |
+| 3.8 | OCR module (label extraction) | ✅ | 2026-07-28 | LabelTextExtractor (PaddleOCR/EasyOCR/Tesseract/mock), regex field parsing (product, brand, expiry, ingredients) |
+| 3.9 | Explainable AI (XAI) module | ✅ | 2026-07-28 | XAIExplainer (Grad-CAM, LIME, SHAP), heatmap overlay, ROI extraction, explanation text generation |
+| 3.10 | LLM-based Report Generation | ✅ | 2026-07-28 | LLMReportGenerator (OpenAI/HF/local), structured JSON reports, template fallback, summary generation |
 | 3.11 | AI model training pipeline | ⏳ | | |
 | 3.12 | Model evaluation & benchmarking | ⏳ | | |
 
@@ -143,11 +143,11 @@ This file tracks the complete development progress of the FoodShield AI system. 
 |-------|------------|-----------|-------------|---------|
 | 1. Foundation & Architecture | 8 | 8 | 0 | 0 |
 | 2. Backend API | 10 | 10 | 0 | 0 |
-| 3. AI Engine | 12 | 7 | 0 | 5 |
+| 3. AI Engine | 12 | 10 | 0 | 2 |
 | 4. Frontend | 8 | 8 | 0 | 0 |
 | 5. MLOps | 7 | 0 | 0 | 7 |
 | 6. Infrastructure & DevOps | 8 | 0 | 0 | 8 |
 | 7. Testing & QA | 7 | 0 | 0 | 7 |
 | 8. Documentation | 5 | 0 | 0 | 5 |
 | 9. Future Enhancements | 6 | 0 | 0 | 6 |
-| **Total** | **71** | **24** | **0** | **47** |
+| **Total** | **71** | **36** | **0** | **35** |
