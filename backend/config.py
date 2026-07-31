@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     debug: bool = False
 
-    database_url: str = "postgresql+asyncpg://neondb_owner:npg_G2kRAuW1hbxo@ep-empty-tree-ay8a8lnk-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require"
+    database_url: str = "postgresql+asyncpg://neondb_owner:npg_G2kRAuW1hbxo@ep-empty-tree-ay8a8lnk-pooler.c-5.us-east-2.aws.neon.tech/neondb"
     redis_url: str = "redis://localhost:6379/0"
 
     storage_endpoint: str = "http://localhost:9000"

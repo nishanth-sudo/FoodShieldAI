@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { authApi } from "lib/api";
+import { createContext, useContext, ReactNode } from "react";
+import { useSession, signIn, signOut } from "next-auth/react";
+import axios from "axios";
 
 interface User {
   id: string;
@@ -18,40 +19,49 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-  useEffect(() => {
-    const token = localStorage.getItem("access_token");
-    if (token) {
-      authApi.me().then(({ data }) => {
-        setUser(data);
-      }).catch(() => {
-        localStorage.removeItem("access_token");
-        localStorage.removeItem("refresh_token");
-      }).finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
-  }, []);
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const { data: session, status } = useSession();
+  const loading = status === "loading";
+
+  const user: User | null = session?.user
+    ? {
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.name,
+        role: session.user.role,
+      }
+    : null;
 
   const login = async (email: string, password: string) => {
-    const { data } = await authApi.login({ email, password });
-    localStorage.setItem("access_token", data.access_token);
-    localStorage.setItem("refresh_token", data.refresh_token);
-    const me = await authApi.me();
-    setUser(me.data);
+    const result = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    });
+
+    if (result?.error) {
+      throw new Error(result.error);
+    }
   };
 
   const register = async (email: string, password: string, name: string) => {
-    await authApi.register({ email, password, name });
+    await axios.post(`${API_BASE}/auth/register`, { email, password, name });
+
+    const result = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    });
+
+    if (result?.error) {
+      throw new Error(result.error);
+    }
   };
 
   const logout = () => {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
-    setUser(null);
+    signOut({ callbackUrl: "/" });
   };
 
   return (
