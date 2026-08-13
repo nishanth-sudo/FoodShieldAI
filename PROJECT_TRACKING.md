@@ -93,20 +93,20 @@ This file tracks the complete development progress of the FoodShield AI system. 
 
 | # | Task | Status | Completed | Notes |
 |---|------|--------|-----------|-------|
-| 6.1 | Docker containerization (all services) | ⏳ | | |
-| 6.2 | Docker Compose for local development | ⏳ | | |
-| 6.3 | CI/CD pipeline (GitHub Actions) | ⏳ | | |
+| 6.1 | Docker containerization (all services) | ✅ | 2026-08-13 | |
+| 6.2 | Docker Compose for local development | ✅ | 2026-08-13 | |
+| 6.3 | CI/CD pipeline (GitHub Actions) | ✅ | 2026-08-13 | |
 | 6.4 | Kubernetes manifests | ⏳ | | |
-| 6.5 | Centralized logging (ELK/Loki) | ⏳ | | |
-| 6.6 | Monitoring & alerting (Prometheus/Grafana) | ⏳ | | |
-| 6.7 | Health check endpoints | ⏳ | | |
-| 6.8 | Secrets management | ⏳ | | |
+| 6.5 | Centralized logging (ELK/Loki) | ✅ | 2026-08-13 | structured JSON logging |
+| 6.6 | Monitoring & alerting (Prometheus/Grafana) | ✅ | 2026-08-13 | MetricsCollector + Prometheus |
+| 6.7 | Health check endpoints | ✅ | 2026-08-13 | |
+| 6.8 | Secrets management | ⏳ | | use env vars for now |
 
 ## Phase 7: Testing & Quality Assurance
 
 | # | Task | Status | Completed | Notes |
 |---|------|--------|-----------|-------|
-| 7.1 | Unit tests (backend) | ⏳ | | |
+| 7.1 | Unit tests (backend) | ✅ | 2026-08-13 | 16 new tests — validation, cache, config, rate limiter; 10 test files total |
 | 7.2 | Unit tests (AI engine) | ⏳ | | |
 | 7.3 | Integration tests | ⏳ | | |
 | 7.4 | End-to-end tests | ⏳ | | |
@@ -146,8 +146,8 @@ This file tracks the complete development progress of the FoodShield AI system. 
 | 3. AI Engine | 12 | 12 | 0 | 0 |
 | 4. Frontend | 8 | 8 | 0 | 0 |
 | 5. MLOps | 7 | 7 | 0 | 0 |
-| 6. Infrastructure & DevOps | 8 | 0 | 0 | 8 |
+| 6. Infrastructure & DevOps | 8 | 5 | 0 | 3 |
 | 7. Testing & QA | 7 | 0 | 0 | 7 |
 | 8. Documentation | 5 | 0 | 0 | 5 |
 | 9. Future Enhancements | 6 | 0 | 0 | 6 |
-| **Total** | **71** | **45** | **0** | **26** |
+| **Total** | **71** | **51** | **0** | **20** |

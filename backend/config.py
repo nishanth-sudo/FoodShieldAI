@@ -25,8 +25,21 @@ class Settings(BaseSettings):
     ai_engine_url: str = "http://ai-engine:8501"
     max_upload_size_mb: int = 10
     allowed_image_types: list[str] = ["image/jpeg", "image/png", "image/webp"]
+    
+    rate_limit_enabled: bool = True
+    rate_limit_requests_per_minute: int = 60
+    log_level: str = "INFO"
+    log_format: str = "json"
+    cors_origins: list[str] = ["*"]
+    image_min_width: int = 32
+    image_min_height: int = 32
+    enable_batch_processing: bool = True
+    batch_max_files: int = 10
+    model_confidence_threshold: float = 0.5
+    cache_inspection_ttl: int = 600
+    cache_result_ttl: int = 3600
 
-    model_config = {"env_prefix": "FOODSHIELD_", "env_file": ".env"}
+    model_config = {"env_prefix": "FOODSHIELD_", "env_file": ".env", "extra": "ignore"}
 
 
 settings = Settings()
