@@ -1,0 +1,184 @@
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+
+type Language = "en" | "es";
+
+type Translations = typeof translations.en;
+
+const translations = {
+  en: {
+    appName: "FoodShield AI",
+    tagline: "AI-Powered Food Quality Inspection Platform",
+    getStarted: "Get Started",
+    welcome: "Welcome",
+    uploadToStart: "Upload a food image to start an inspection",
+    newInspection: "New Inspection",
+    newInspectionDesc: "Upload or capture a food image for AI analysis",
+    history: "History",
+    historyDesc: "View your past inspection results",
+    admin: "Admin",
+    adminDesc: "Manage users and monitor system health",
+    login: "Login",
+    signIn: "Sign In",
+    signInTitle: "Sign in to FoodShield AI",
+    register: "Register",
+    createAccount: "Create account",
+    createAccountTitle: "Create an account",
+    email: "Email",
+    password: "Password",
+    name: "Name",
+    signingIn: "Signing in...",
+    creatingAccount: "Creating account...",
+    noAccount: "Don't have an account?",
+    hasAccount: "Already have an account?",
+    logout: "Logout",
+    inspect: "Inspect",
+    back: "Back",
+    foodInspection: "Food Inspection",
+    selectImage: "Select a food image to inspect",
+    chooseImage: "Choose Image",
+    runInspection: "Run Inspection",
+    analyzing: "Analyzing...",
+    cancel: "Cancel",
+    freshness: "Freshness",
+    foodType: "Food Type",
+    shelfLife: "Shelf Life",
+    defects: "Defects",
+    packagingDefects: "Packaging Defects",
+    contaminationRisks: "Contamination Risks",
+    xaiMap: "AI Focus Map",
+    showAI: "Show AI focus",
+    showOriginal: "Show original",
+    xaiExplanation: "Red areas indicate regions that influenced the AI's decision",
+    inspectionReport: "Inspection Report",
+    loading: "Loading...",
+    noReport: "No report generated yet",
+    noInspections: "No inspections yet. Start by uploading a food image.",
+    previous: "Previous",
+    next: "Next",
+    pageOf: "Page {page} of {totalPages}",
+    adminDashboard: "Admin Dashboard",
+    totalUsers: "Total Users",
+    inspections: "Inspections",
+    systemStatus: "System Status",
+    usersTable: "Users",
+    role: "Role",
+    offlineWarning: "You are currently offline. Some features may be unavailable.",
+    invalidFileType: "Invalid file type. Only JPEG, PNG, and WebP are allowed.",
+    fileTooLarge: "File is too large. Maximum size is 5MB.",
+    lowConfidenceWarning: "Warning: AI prediction confidence is low. Please inspect the food manually for verification.",
+    confidence: "Confidence",
+    dragDropText: "Drag & drop food images, or click to select",
+    dropHereText: "Drop images here...",
+    status: "Status",
+    completed: "completed",
+    failed: "failed",
+    processing: "processing",
+    retry: "Retry",
+    exportData: "Export Data",
+    unknownFood: "Unknown food",
+  },
+  es: {
+    appName: "FoodShield AI",
+    tagline: "Plataforma de inspección de calidad alimentaria impulsada por IA",
+    getStarted: "Empezar",
+    welcome: "Bienvenido",
+    uploadToStart: "Suba una imagen de comida para iniciar la inspección",
+    newInspection: "Nueva Inspección",
+    newInspectionDesc: "Suba o capture una imagen de comida para análisis de IA",
+    history: "Historial",
+    historyDesc: "Ver los resultados de inspecciones pasadas",
+    admin: "Admin",
+    adminDesc: "Administrar usuarios y monitorear la salud del sistema",
+    login: "Iniciar sesión",
+    signIn: "Iniciar sesión",
+    signInTitle: "Inicie sesión en FoodShield AI",
+    register: "Registrarse",
+    createAccount: "Crear cuenta",
+    createAccountTitle: "Crear una cuenta",
+    email: "Correo electrónico",
+    password: "Contraseña",
+    name: "Nombre",
+    signingIn: "Iniciando sesión...",
+    creatingAccount: "Creando cuenta...",
+    noAccount: "¿No tiene una cuenta?",
+    hasAccount: "¿Ya tiene una cuenta?",
+    logout: "Cerrar sesión",
+    inspect: "Inspeccionar",
+    back: "Atrás",
+    foodInspection: "Inspección de Alimentos",
+    selectImage: "Seleccione una imagen de comida para inspeccionar",
+    chooseImage: "Elegir Imagen",
+    runInspection: "Iniciar Inspección",
+    analyzing: "Analizando...",
+    cancel: "Cancelar",
+    freshness: "Frescura",
+    foodType: "Tipo de Alimento",
+    shelfLife: "Vida Útil",
+    defects: "Defectos",
+    packagingDefects: "Defectos de Empaque",
+    contaminationRisks: "Riesgos de Contaminación",
+    xaiMap: "Mapa de Enfoque de IA",
+    showAI: "Mostrar enfoque de IA",
+    showOriginal: "Mostrar original",
+    xaiExplanation: "Las áreas rojas indican las regiones que influyeron en la decisión de la IA",
+    inspectionReport: "Informe de Inspección",
+    loading: "Cargando...",
+    noReport: "Aún no se ha generado ningún informe",
+    noInspections: "Aún no hay inspecciones. Comience subiendo una imagen de comida.",
+    previous: "Anterior",
+    next: "Siguiente",
+    pageOf: "Página {page} de {totalPages}",
+    adminDashboard: "Panel de Administración",
+    totalUsers: "Usuarios Totales",
+    inspections: "Inspecciones",
+    systemStatus: "Estado del Sistema",
+    usersTable: "Usuarios",
+    role: "Rol",
+    offlineWarning: "Actualmente no tiene conexión. Algunas funciones pueden no estar disponibles.",
+    invalidFileType: "Tipo de archivo no válido. Solo se permiten JPEG, PNG y WebP.",
+    fileTooLarge: "El archivo es demasiado grande. El tamaño máximo es de 5 MB.",
+    lowConfidenceWarning: "Advertencia: La confianza de la predicción de la IA es baja. Por favor, inspeccione la comida manualmente.",
+    confidence: "Confianza",
+    dragDropText: "Arrastre y suelte imágenes de comida, o haga clic para seleccionar",
+    dropHereText: "Suelte las imágenes aquí...",
+    status: "Estado",
+    completed: "completado",
+    failed: "fallido",
+    processing: "procesando",
+    retry: "Reintentar",
+    exportData: "Exportar Datos",
+    unknownFood: "Alimento desconocido",
+  },
+};
+
+interface LanguageContextType {
+  language: Language;
+  t: Translations;
+  setLanguage: (lang: Language) => void;
+}
+
+const LanguageContext = createContext<LanguageContextType>({} as LanguageContextType);
+
+export function LanguageProvider({ children }: { children: ReactNode }) {
+  const [language, setLanguageState] = useState<Language>("en");
+
+  useEffect(() => {
+    const savedLang = localStorage.getItem("language") as Language | null;
+    if (savedLang === "en" || savedLang === "es") {
+      setLanguageState(savedLang);
+    }
+  }, []);
+
+  const setLanguage = (lang: Language) => {
+    setLanguageState(lang);
+    localStorage.setItem("language", lang);
+  };
+
+  return (
+    <LanguageContext.Provider value={{ language, t: translations[language], setLanguage }}>
+      {children}
+    </LanguageContext.Provider>
+  );
+}
+
+export const useLanguage = () => useContext(LanguageContext);
