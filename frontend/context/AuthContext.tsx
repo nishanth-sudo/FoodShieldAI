@@ -1,13 +1,8 @@
 import { createContext, useContext, ReactNode } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import axios from "axios";
-
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: string;
-}
+import { CONFIG } from "lib/config";
+import type { User } from "lib/types";
 
 interface AuthContextType {
   user: User | null;
@@ -18,8 +13,6 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession();
@@ -47,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const register = async (email: string, password: string, name: string) => {
-    await axios.post(`${API_BASE}/auth/register`, { email, password, name });
+    await axios.post(`${CONFIG.API_URL}/auth/register`, { email, password, name });
 
     const result = await signIn("credentials", {
       email,

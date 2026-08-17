@@ -50,7 +50,7 @@ export function ImageUploader({ onFileSelected }: ImageUploaderProps) {
             {isDragActive ? t.dropHereText : t.dragDropText}
           </p>
           <p className="text-xs text-gray-400 dark:text-gray-500">
-            JPEG, PNG, WebP (max 5MB)
+            {t.fileSizeHint}
           </p>
         </div>
         <span className="inline-block bg-primary-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-primary-700 active:scale-95 transition shadow-sm">

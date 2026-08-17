@@ -3,6 +3,7 @@ import { ProtectedRoute } from "components/ProtectedRoute";
 import { useInspection } from "../context/InspectionContext";
 import { useLanguage } from "../context/LanguageContext";
 import { CONFIG } from "../lib/config";
+import { getConfidence } from "../lib/types";
 import { FreshnessGauge } from "components/FreshnessGauge";
 import { XAIViewer } from "components/XAIViewer";
 import { ReportViewer } from "components/ReportViewer";
@@ -49,7 +50,9 @@ function InspectContent() {
   const isUploadingOrAnalyzing = status === "uploading" || status === "analyzing";
 
   // Check if AI confidence is low
-  const isLowConfidence = result && result.freshness_score !== undefined && result.freshness_score < CONFIG.CONFIDENCE_THRESHOLD * 100;
+  const isLowConfidence = !!result && result.freshness_score != null && result.freshness_score < CONFIG.CONFIDENCE_THRESHOLD * 100;
+  const confidence = result ? getConfidence(result) : undefined;
+  const defects = result?.packaging_defects ?? [];
 
   return (
     <div className="animate-fadeIn max-w-5xl mx-auto space-y-6">
@@ -164,15 +167,15 @@ function InspectContent() {
                       {result.food_type || t.unknownFood}
                     </p>
                   </div>
-                  {result.confidence !== undefined && (
+                  {confidence !== undefined && (
                     <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                       <p className="text-xs text-gray-400 dark:text-gray-500 font-medium mb-1">
-                        {t.confidence}: {(result.confidence * 100).toFixed(0)}%
+                        {t.confidence}: {(confidence * 100).toFixed(0)}%
                       </p>
                       <div className="w-full bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-primary-500"
-                          style={{ width: `${(result.confidence * 100).toFixed(0)}%` }}
+                          style={{ width: `${(confidence * 100).toFixed(0)}%` }}
                         />
                       </div>
                     </div>
@@ -187,7 +190,7 @@ function InspectContent() {
                   </p>
                   <p className="text-2xl font-black text-gray-900 dark:text-white">
                     {result.shelf_life_days ?? "—"}{" "}
-                    <span className="text-sm font-normal text-gray-400 dark:text-gray-500">days</span>
+                    <span className="text-sm font-normal text-gray-400 dark:text-gray-500">{t.days}</span>
                   </p>
                 </div>
 
@@ -195,19 +198,19 @@ function InspectContent() {
                   <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                     {t.defects}
                   </p>
-                  <p className="text-2xl font-black text-gray-900 dark:text-white">
-                    {result.packaging_defects?.length || 0}
-                  </p>
+              <p className="text-2xl font-black text-gray-900 dark:text-white">
+                {defects.length}
+              </p>
                 </div>
               </div>
 
-              {result.packaging_defects?.length > 0 && (
+              {defects.length > 0 && (
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
                   <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-3">
                     {t.packagingDefects}
                   </h3>
                   <ul className="space-y-2">
-                    {result.packaging_defects.map((def: any, idx: number) => (
+                    {defects.map((def, idx) => (
                       <li
                         key={idx}
                         className="text-sm flex justify-between items-center py-1.5 border-b border-gray-50 dark:border-gray-700/50 last:border-0"

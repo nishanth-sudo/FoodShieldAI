@@ -3,10 +3,10 @@ import { useLanguage } from "context/LanguageContext";
 
 interface Props {
   id: string;
-  foodType?: string;
-  freshnessScore?: number;
+  foodType?: string | null;
+  freshnessScore?: number | null;
   status: string;
-  createdAt: string;
+  createdAt?: string | null;
 }
 
 export function InspectionCard({ id, foodType, freshnessScore, status, createdAt }: Props) {
@@ -40,7 +40,7 @@ export function InspectionCard({ id, foodType, freshnessScore, status, createdAt
             {foodType || t.unknownFood}
           </p>
           <p className="text-xs md:text-sm text-gray-400 dark:text-gray-400">
-            {new Date(createdAt).toLocaleString()}
+            {createdAt ? new Date(createdAt).toLocaleString() : ""}
           </p>
         </div>
         <div className="text-right flex flex-col items-end gap-1.5">

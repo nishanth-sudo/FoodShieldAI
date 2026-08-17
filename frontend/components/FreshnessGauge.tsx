@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLanguage } from "../context/LanguageContext";
 
 interface Props {
   score: number;
@@ -7,6 +8,7 @@ interface Props {
 
 export function FreshnessGauge({ score, label }: Props) {
   const [animatedScore, setAnimatedScore] = useState(0);
+  const { t } = useLanguage();
 
   // Animating the score count
   useEffect(() => {
@@ -72,12 +74,12 @@ export function FreshnessGauge({ score, label }: Props) {
         </svg>
         <div className="absolute flex flex-col items-center justify-center">
           <span className={`text-3xl font-extrabold tracking-tight ${textColorClass}`}>{animatedScore}%</span>
-          <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">score</span>
+          <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">{t.score}</span>
         </div>
       </div>
 
       <div className={`mt-4 px-3 py-1 rounded-full text-xs font-bold border ${bgBadgeClass}`}>
-        {score >= 80 ? "Fresh & Safe" : score >= 50 ? "Caution / Warning" : "Spoiled / Defective"}
+        {score >= 80 ? t.freshSafe : score >= 50 ? t.cautionWarning : t.spoiledDefective}
       </div>
     </div>
   );

@@ -4,6 +4,6 @@ export const CONFIG = {
   ACCEPTED_FILE_TYPES: ["image/jpeg", "image/png", "image/webp"],
   ACCEPTED_FILE_EXTENSIONS: [".jpg", ".jpeg", ".png", ".webp"],
   CONFIDENCE_THRESHOLD: 0.70, // Confidence score below 70% shows caution warning
-  RETRY_MAX_ATTEMPTS: 3,
-  RETRY_INITIAL_DELAY: 1000,
+  POLL_INTERVAL_MS: 2000, // How often to poll for analysis results
+  POLL_MAX_ATTEMPTS: 45, // Give up after ~90s of polling
 };

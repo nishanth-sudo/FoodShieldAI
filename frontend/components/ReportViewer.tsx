@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLanguage } from "../context/LanguageContext";
 
 interface Props {
-  report: string;
+  report?: string | null;
 }
 
 export function ReportViewer({ report }: Props) {
@@ -30,9 +30,9 @@ export function ReportViewer({ report }: Props) {
           onClick={() => setIsExpanded(!isExpanded)}
           className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-semibold focus:outline-none focus:ring-2 focus:ring-primary-500 rounded px-1"
           aria-expanded={isExpanded}
-          aria-label={`${isExpanded ? "Collapse" : "Expand"} inspection report`}
+          aria-label={`${isExpanded ? t.collapse : t.expand} inspection report`}
         >
-          {isExpanded ? "Collapse" : "Expand"}
+          {isExpanded ? t.collapse : t.expand}
         </button>
       </div>
 

@@ -21,7 +21,9 @@ export default function LoginPage() {
       await login(email, password);
       router.push("/");
     } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || "Login failed");
+      // NextAuth reports failed credentials as the generic "CredentialsSignin";
+      // map it to a user-friendly, localized message
+      setError(err.message === "CredentialsSignin" ? t.invalidCredentials : err.response?.data?.detail || err.message || "Login failed");
     } finally {
       setSubmitting(false);
     }

@@ -182,7 +182,7 @@ export function Layout({ children }: { children: ReactNode }) {
 
             <div className="pt-4 pb-2 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between px-3">
               <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                Language / Idioma
+                {t.language}
               </div>
               <div className="flex items-center border rounded-lg overflow-hidden dark:border-gray-600">
                 <button

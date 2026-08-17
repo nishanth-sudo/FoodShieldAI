@@ -9,6 +9,8 @@ import { ReportViewer } from "components/ReportViewer";
 import { LoadingSpinner } from "components/LoadingSpinner";
 import { useLanguage } from "../../context/LanguageContext";
 import { useInspection } from "../../context/InspectionContext";
+import { getConfidence } from "../../lib/types";
+import type { Inspection } from "../../lib/types";
 
 export default function InspectionDetailPage() {
   return (
@@ -21,7 +23,7 @@ export default function InspectionDetailPage() {
 function DetailContent() {
   const router = useRouter();
   const { id } = router.query;
-  const [inspection, setInspection] = useState<any>(null);
+  const [inspection, setInspection] = useState<Inspection | null>(null);
   const [loading, setLoading] = useState(true);
   const { t } = useLanguage();
   const { isOnline, localHistory, exportInspectionAsJson, deleteLocalInspection } = useInspection();
@@ -53,7 +55,7 @@ function DetailContent() {
 
   const handleDelete = () => {
     if (!id) return;
-    if (confirm("Are you sure you want to delete this inspection from your history?")) {
+    if (confirm(t.confirmDelete)) {
       deleteLocalInspection(id as string);
       router.push("/history");
     }
@@ -64,20 +66,22 @@ function DetailContent() {
     return (
       <div className="text-center py-16 text-gray-500 dark:text-gray-400">
         <p className="text-5xl mb-4">🔍</p>
-        <p className="text-lg font-bold">Inspection not found.</p>
+        <p className="text-lg font-bold">{t.inspectionNotFound}</p>
         <button
           onClick={() => router.push("/history")}
           className="mt-4 text-primary-600 dark:text-primary-400 hover:underline font-semibold"
         >
-          Return to History
+          {t.returnToHistory}
         </button>
       </div>
     );
   }
 
   const isLowConfidence =
-    inspection.freshness_score !== undefined &&
+    inspection.freshness_score != null &&
     inspection.freshness_score < CONFIG.CONFIDENCE_THRESHOLD * 100;
+  const confidence = getConfidence(inspection);
+  const defects = inspection.packaging_defects ?? [];
 
   return (
     <div className="animate-fadeIn space-y-6">
@@ -85,7 +89,7 @@ function DetailContent() {
         <button
           onClick={() => router.back()}
           className="text-sm font-semibold text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded px-1 py-0.5"
-          aria-label="Back to previous page"
+          aria-label={t.back}
         >
           &larr; {t.back}
         </button>
@@ -101,7 +105,7 @@ function DetailContent() {
             onClick={handleDelete}
             className="px-4 py-2 border rounded-lg text-sm font-bold bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/30 transition focus:outline-none focus:ring-2 focus:ring-red-500 shadow-sm"
           >
-            🗑️ Delete
+            🗑️ {t.delete}
           </button>
         </div>
       </div>
@@ -140,15 +144,15 @@ function DetailContent() {
                   {t[inspection.status as keyof typeof t] || inspection.status}
                 </span>
               </div>
-              {inspection.confidence !== undefined && (
+              {confidence !== undefined && (
                 <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                   <p className="text-xs text-gray-400 dark:text-gray-500 font-medium mb-1">
-                    {t.confidence}: {(inspection.confidence * 100).toFixed(0)}%
+                    {t.confidence}: {(confidence * 100).toFixed(0)}%
                   </p>
                   <div className="w-full bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-primary-500"
-                      style={{ width: `${(inspection.confidence * 100).toFixed(0)}%` }}
+                      style={{ width: `${(confidence * 100).toFixed(0)}%` }}
                     />
                   </div>
                 </div>
@@ -163,7 +167,7 @@ function DetailContent() {
               </p>
               <p className="text-2xl font-black text-gray-900 dark:text-white">
                 {inspection.shelf_life_days ?? "—"}{" "}
-                <span className="text-sm font-normal text-gray-400 dark:text-gray-500">days</span>
+                <span className="text-sm font-normal text-gray-400 dark:text-gray-500">{t.days}</span>
               </p>
             </div>
 
@@ -172,7 +176,7 @@ function DetailContent() {
                 {t.defects}
               </p>
               <p className="text-2xl font-black text-gray-900 dark:text-white">
-                {inspection.packaging_defects?.length || 0}
+                {defects.length}
               </p>
             </div>
           </div>
@@ -187,13 +191,13 @@ function DetailContent() {
 
         {/* Right Side: Defect Types, Risks and Reports */}
         <div className="space-y-6">
-          {inspection.packaging_defects?.length > 0 && (
+          {defects.length > 0 && (
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
               <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-3">
                 {t.packagingDefects}
               </h3>
               <ul className="space-y-2">
-                {inspection.packaging_defects.map((def: any, idx: number) => (
+                {defects.map((def, idx) => (
                   <li
                     key={idx}
                     className="text-sm flex justify-between items-center py-1.5 border-b border-gray-50 dark:border-gray-700/50 last:border-0"

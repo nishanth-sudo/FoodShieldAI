@@ -1,6 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { CONFIG } from "../lib/config";
 import { inspectionApi } from "../lib/api";
+import { useLanguage } from "./LanguageContext";
+import type { Inspection } from "../lib/types";
 
 export type InspectionStatus = "idle" | "validating" | "uploading" | "analyzing" | "completed" | "failed";
 
@@ -9,14 +11,14 @@ interface InspectionContextType {
   preview: string | null;
   status: InspectionStatus;
   statusText: string;
-  result: any | null;
+  result: Inspection | null;
   error: string | null;
   isOnline: boolean;
-  localHistory: any[];
+  localHistory: Inspection[];
   validateAndSelectFile: (selectedFile: File) => boolean;
   clearFile: () => void;
   runInspection: () => Promise<void>;
-  exportInspectionAsJson: (inspection: any) => void;
+  exportInspectionAsJson: (inspection: Inspection) => void;
   deleteLocalInspection: (id: string) => void;
 }
 
@@ -27,10 +29,12 @@ export function InspectionProvider({ children }: { children: React.ReactNode }) 
   const [preview, setPreview] = useState<string | null>(null);
   const [status, setStatus] = useState<InspectionStatus>("idle");
   const [statusText, setStatusText] = useState<string>("");
-  const [result, setResult] = useState<any | null>(null);
+  const [result, setResult] = useState<Inspection | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState<boolean>(true);
-  const [localHistory, setLocalHistory] = useState<any[]>([]);
+  const [localHistory, setLocalHistory] = useState<Inspection[]>([]);
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const { t } = useLanguage();
 
   // Monitor network status
   useEffect(() => {
@@ -57,6 +61,15 @@ export function InspectionProvider({ children }: { children: React.ReactNode }) 
         window.removeEventListener("offline", handleOffline);
       };
     }
+  }, []);
+
+  // Clear any in-flight poll timer on unmount
+  useEffect(() => {
+    return () => {
+      if (pollTimerRef.current) {
+        clearInterval(pollTimerRef.current);
+      }
+    };
   }, []);
 
   // Update offline warning automatically
@@ -105,7 +118,7 @@ export function InspectionProvider({ children }: { children: React.ReactNode }) 
     setError(null);
   }, [preview]);
 
-  const saveInspectionLocally = useCallback((inspection: any) => {
+  const saveInspectionLocally = useCallback((inspection: Inspection) => {
     setLocalHistory((prev) => {
       // Avoid duplicate keys
       const filtered = prev.filter((item) => item.id !== inspection.id);
@@ -123,7 +136,7 @@ export function InspectionProvider({ children }: { children: React.ReactNode }) 
     });
   }, []);
 
-  const exportInspectionAsJson = useCallback((inspection: any) => {
+  const exportInspectionAsJson = useCallback((inspection: Inspection) => {
     if (!inspection) return;
     const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
       JSON.stringify(inspection, null, 2)
@@ -145,48 +158,53 @@ export function InspectionProvider({ children }: { children: React.ReactNode }) 
     }
 
     setStatus("uploading");
-    setStatusText("Uploading image...");
+    setStatusText(t.uploading);
     setError(null);
 
     try {
       const { data } = await inspectionApi.upload(file);
       setStatus("analyzing");
-      setStatusText("Analyzing food quality...");
+      setStatusText(t.analyzingStatus);
 
       let attempts = 0;
-      const pollInterval = setInterval(async () => {
+      pollTimerRef.current = setInterval(async () => {
+        attempts += 1;
         try {
           const { data: updated } = await inspectionApi.get(data.id);
-          attempts += 1;
 
           if (updated.status === "completed") {
-            clearInterval(pollInterval);
+            if (pollTimerRef.current) clearInterval(pollTimerRef.current);
             setResult(updated);
             saveInspectionLocally(updated);
             setStatus("completed");
             setStatusText("");
           } else if (updated.status === "failed") {
-            clearInterval(pollInterval);
-            setError(updated.error || "Inspection analysis failed on the model server.");
+            if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+            setError(updated.error || t.failedAnalysis);
+            setStatus("failed");
+            setStatusText("");
+          } else if (attempts >= CONFIG.POLL_MAX_ATTEMPTS) {
+            if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+            setError(t.timeoutError);
             setStatus("failed");
             setStatusText("");
           } else {
             // still processing
-            setStatusText(`Analyzing food quality... (polling attempt ${attempts})`);
+            setStatusText(t.analyzingAttempt.replace("{attempt}", String(attempts)));
           }
         } catch (pollErr: any) {
-          clearInterval(pollInterval);
-          setError(pollErr.response?.data?.detail || "Error fetching inspection results.");
+          if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+          setError(pollErr.response?.data?.detail || t.fetchError);
           setStatus("failed");
           setStatusText("");
         }
-      }, CONFIG.RETRY_INITIAL_DELAY * 2);
+      }, CONFIG.POLL_INTERVAL_MS);
     } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || "Failed to upload image. Please try again.");
+      setError(err.response?.data?.detail || err.message || t.uploadFailed);
       setStatus("failed");
       setStatusText("");
     }
-  }, [file, isOnline, saveInspectionLocally]);
+  }, [file, isOnline, saveInspectionLocally, t]);
 
   return (
     <InspectionContext.Provider

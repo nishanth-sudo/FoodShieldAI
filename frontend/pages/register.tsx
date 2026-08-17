@@ -21,19 +21,19 @@ export default function RegisterPage() {
 
     // Client-side validations
     if (password.length < 8) {
-      setError(t.fileTooLarge); // we need password validation error or fallback
-      setError("Password must be at least 8 characters long.");
+      setError(t.passwordTooShort);
       return;
     }
     if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+      setError(t.passwordMismatch);
       return;
     }
 
     setSubmitting(true);
     try {
       await register(email, password, name);
-      router.push("/login");
+      // register() signs the user in automatically, so go straight home
+      router.push("/");
     } catch (err: any) {
       setError(err.response?.data?.detail || err.message || "Registration failed");
     } finally {
@@ -109,7 +109,7 @@ export default function RegisterPage() {
 
         <div>
           <label htmlFor="confirmPassword" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
-            Confirm Password
+            {t.confirmPassword}
           </label>
           <input
             id="confirmPassword"

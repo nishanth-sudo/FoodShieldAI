@@ -5,6 +5,7 @@ import { InspectionCard } from "components/InspectionCard";
 import { LoadingSpinner } from "components/LoadingSpinner";
 import { useLanguage } from "context/LanguageContext";
 import { useInspection } from "context/InspectionContext";
+import type { Inspection } from "lib/types";
 
 export default function HistoryPage() {
   return (
@@ -15,7 +16,7 @@ export default function HistoryPage() {
 }
 
 function HistoryContent() {
-  const [inspections, setInspections] = useState<any[]>([]);
+  const [inspections, setInspections] = useState<Inspection[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -107,7 +108,7 @@ function HistoryContent() {
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
                 className="px-4 py-2 text-sm font-semibold border rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 disabled:opacity-30 hover:bg-gray-50 dark:hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-primary-500"
-                aria-label="Go to previous page"
+                aria-label={t.previous}
               >
                 {t.previous}
               </button>
@@ -118,7 +119,7 @@ function HistoryContent() {
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages}
                 className="px-4 py-2 text-sm font-semibold border rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 disabled:opacity-30 hover:bg-gray-50 dark:hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-primary-500"
-                aria-label="Go to next page"
+                aria-label={t.next}
               >
                 {t.next}
               </button>

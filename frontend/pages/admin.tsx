@@ -3,6 +3,7 @@ import { ProtectedRoute } from "components/ProtectedRoute";
 import { adminApi } from "lib/api";
 import { LoadingSpinner } from "components/LoadingSpinner";
 import { useLanguage } from "context/LanguageContext";
+import type { HealthStatus, Inspection, User } from "lib/types";
 
 export default function AdminPage() {
   return (
@@ -13,9 +14,9 @@ export default function AdminPage() {
 }
 
 function AdminContent() {
-  const [users, setUsers] = useState<any[]>([]);
-  const [inspections, setInspections] = useState<any[]>([]);
-  const [health, setHealth] = useState<any>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [inspections, setInspections] = useState<Inspection[]>([]);
+  const [health, setHealth] = useState<HealthStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const { t } = useLanguage();
 

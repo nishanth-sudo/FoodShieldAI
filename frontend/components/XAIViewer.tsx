@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useLanguage } from "../context/LanguageContext";
 
 interface Props {
-  originalUrl?: string;
-  heatmapUrl?: string;
+  originalUrl?: string | null;
+  heatmapUrl?: string | null;
 }
 
 export function XAIViewer({ originalUrl, heatmapUrl }: Props) {
@@ -11,7 +11,7 @@ export function XAIViewer({ originalUrl, heatmapUrl }: Props) {
   const { t } = useLanguage();
 
   if (!heatmapUrl && !originalUrl) {
-    return <p className="text-gray-400 dark:text-gray-500 text-sm italic">No image available</p>;
+    return <p className="text-gray-400 dark:text-gray-500 text-sm italic">{t.noImage}</p>;
   }
 
   return (
@@ -33,7 +33,7 @@ export function XAIViewer({ originalUrl, heatmapUrl }: Props) {
 
       <div className="relative aspect-video bg-gray-50 dark:bg-gray-900/50 rounded-lg overflow-hidden border border-gray-100 dark:border-gray-800">
         <img
-          src={showHeatmap && heatmapUrl ? heatmapUrl : originalUrl}
+          src={showHeatmap && heatmapUrl ? heatmapUrl : originalUrl ?? undefined}
           alt={showHeatmap ? "AI Explainability Heatmap" : "Original Food Inspection Image"}
           className="w-full h-full object-contain"
           loading="lazy"
