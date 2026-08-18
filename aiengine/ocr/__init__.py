@@ -1,3 +1,3 @@
-from ai_engine.ocr.extractor import LabelTextExtractor, FIELD_PATTERNS
+from aiengine.ocr.extractor import FIELD_PATTERNS, LabelTextExtractor
 
 __all__ = ["LabelTextExtractor", "FIELD_PATTERNS"]

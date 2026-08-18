@@ -1,4 +1,5 @@
 import re
+
 from PIL import Image
 
 try:
@@ -38,31 +39,40 @@ FIELD_PATTERNS = {
 
 
 class LabelTextExtractor:
-    def __init__(self, backend: str = "paddleocr"):
+    def __init__(self, backend: str = "paddleocr") -> None:
         self.backend_name = backend
         self._ocr = None
         if backend != "mock":
             self._init_backend()
 
-    def _init_backend(self):
+    def _init_backend(self) -> None:
         if self.backend_name == "paddleocr":
             try:
                 from paddleocr import PaddleOCR
+
                 self._ocr = PaddleOCR(use_angle_cls=True, lang="en", show_log=False)
             except ImportError:
-                raise ImportError("paddleocr is required. Install with: pip install paddleocr")
+                raise ImportError(
+                    "paddleocr is required. Install with: pip install paddleocr"
+                ) from None
         elif self.backend_name == "easyocr":
             try:
                 import easyocr
+
                 self._ocr = easyocr.Reader(["en"])
             except ImportError:
-                raise ImportError("easyocr is required. Install with: pip install easyocr")
+                raise ImportError(
+                    "easyocr is required. Install with: pip install easyocr"
+                ) from None
         elif self.backend_name == "tesseract":
             try:
                 import pytesseract
+
                 self._ocr = pytesseract
             except ImportError:
-                raise ImportError("pytesseract is required. Install with: pip install pytesseract")
+                raise ImportError(
+                    "pytesseract is required. Install with: pip install pytesseract"
+                ) from None
         else:
             raise ValueError(f"Unsupported OCR backend: {self.backend_name}")
 
@@ -75,7 +85,9 @@ class LabelTextExtractor:
             "backend": self.backend_name,
         }
 
-    def extract_from_label_region(self, image: Image.Image, label_region: Image.Image | None = None) -> dict:
+    def extract_from_label_region(
+        self, image: Image.Image, label_region: Image.Image | None = None
+    ) -> dict:
         return self.extract(label_region or image)
 
     def _run_ocr(self, image: Image.Image) -> str:
@@ -102,7 +114,9 @@ class LabelTextExtractor:
             for pattern in patterns:
                 match = re.search(pattern, text.strip(), re.IGNORECASE)
                 if match:
-                    parsed[field] = match.group(1).strip() if match.lastindex else match.group(0).strip()
+                    parsed[field] = (
+                        match.group(1).strip() if match.lastindex else match.group(0).strip()
+                    )
                     break
         return parsed
 

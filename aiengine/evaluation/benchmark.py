@@ -55,10 +55,12 @@ class ModelBenchmark:
         return float(np.median(times))
 
     def measure_peak_memory(
-        self, input_shape: tuple[int, ...] = (1, 3, 224, 224),
+        self,
+        input_shape: tuple[int, ...] = (1, 3, 224, 224),
     ) -> float:
         if not torch.cuda.is_available():
             import psutil
+
             process = psutil.Process()
             memory_before = process.memory_info().rss / (1024 * 1024)
             dummy_input = torch.randn(input_shape, device="cpu")

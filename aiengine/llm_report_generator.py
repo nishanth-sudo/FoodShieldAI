@@ -1,3 +1,4 @@
+# ruff: noqa: E501  # long prompt template lines inside triple-quoted strings
 import json
 import logging
 from datetime import datetime
@@ -50,7 +51,7 @@ Summary:"""
 
 
 class LLMReportGenerator:
-    def __init__(self, model_name: str = "gpt-4", temperature: float = 0.3):
+    def __init__(self, model_name: str = "gpt-4", temperature: float = 0.3) -> None:
         self.model_name = model_name
         self.temperature = temperature
         self._client = None
@@ -59,10 +60,11 @@ class LLMReportGenerator:
         if not self._is_using_local:
             self._init_remote_client()
 
-    def _init_remote_client(self):
+    def _init_remote_client(self) -> None:
         if self.model_name.startswith("gpt"):
             try:
                 from openai import OpenAI
+
                 self._client = OpenAI()
             except ImportError:
                 logger.warning("openai not installed. Install with: pip install openai")
@@ -70,9 +72,12 @@ class LLMReportGenerator:
         elif self.model_name.startswith("hf") or self.model_name.startswith("local/"):
             try:
                 from huggingface_hub import InferenceClient
+
                 self._client = InferenceClient()
             except ImportError:
-                logger.warning("huggingface-hub not installed. Install with: pip install huggingface-hub")
+                logger.warning(
+                    "huggingface-hub not installed. Install with: pip install huggingface-hub"
+                )
                 self._client = None
 
     def generate_report(self, inspection_results: dict) -> dict:
@@ -106,10 +111,13 @@ class LLMReportGenerator:
         defects = results.get("packaging_defects", [])
         ocr = results.get("ocr_data", {})
 
-        defect_lines = "\n".join(
-            f"  - {d['defect_type']} (confidence: {d.get('confidence', 0):.2f})"
-            for d in (defects if isinstance(defects, list) else [])
-        ) or "  None detected"
+        defect_lines = (
+            "\n".join(
+                f"  - {d['defect_type']} (confidence: {d.get('confidence', 0):.2f})"
+                for d in (defects if isinstance(defects, list) else [])
+            )
+            or "  None detected"
+        )
 
         detected_risks_list = []
         if isinstance(contamination, dict):
@@ -118,16 +126,28 @@ class LLMReportGenerator:
 
         return REPORT_TEMPLATE.format(
             food_type=food_cls.get("food_type", "Unknown"),
-            classification_confidence=food_cls.get("confidence_scores", [{"confidence": 0}])[0]["confidence"],
+            classification_confidence=food_cls.get("confidence_scores", [{"confidence": 0}])[0][
+                "confidence"
+            ],
             freshness_score=spoilage.get("freshness_score", results.get("freshness_score", 0)),
             is_spoiled=spoilage.get("is_spoiled", False),
             spoilage_severity=spoilage.get("severity_label", "unknown"),
             packaging_defects=defect_lines,
-            contamination_risk=contamination.get("overall_risk_level", "unknown") if isinstance(contamination, dict) else "unknown",
+            contamination_risk=contamination.get("overall_risk_level", "unknown")
+            if isinstance(contamination, dict)
+            else "unknown",
             detected_risks=", ".join(detected_risks_list) or "None",
-            shelf_life_days=shelf.get("estimated_days_remaining", results.get("shelf_life_days", "N/A")) if isinstance(shelf, dict) else "N/A",
-            freshness_category=shelf.get("freshness_category", "unknown") if isinstance(shelf, dict) else "unknown",
-            ocr_data=json.dumps(ocr.get("parsed", ocr), indent=2) if isinstance(ocr, dict) else str(ocr),
+            shelf_life_days=shelf.get(
+                "estimated_days_remaining", results.get("shelf_life_days", "N/A")
+            )
+            if isinstance(shelf, dict)
+            else "N/A",
+            freshness_category=shelf.get("freshness_category", "unknown")
+            if isinstance(shelf, dict)
+            else "unknown",
+            ocr_data=json.dumps(ocr.get("parsed", ocr), indent=2)
+            if isinstance(ocr, dict)
+            else str(ocr),
         )
 
     def _call_llm(self, prompt: str) -> str:
@@ -189,7 +209,11 @@ class LLMReportGenerator:
             recommendations.append("Consume within 24 hours")
         recommendations.append("Store at recommended temperature")
 
-        shelf_days = shelf.get("estimated_days_remaining", results.get("shelf_life_days", "N/A")) if isinstance(shelf, dict) else "N/A"
+        shelf_days = (
+            shelf.get("estimated_days_remaining", results.get("shelf_life_days", "N/A"))
+            if isinstance(shelf, dict)
+            else "N/A"
+        )
 
         return {
             "report_title": f"Food Inspection Report — {food_type}",
@@ -200,10 +224,30 @@ class LLMReportGenerator:
                 f"Overall verdict: {verdict}."
             ),
             "detailed_findings": [
-                {"area": "Food Classification", "status": "info", "detail": f"Identified as {food_type}"},
-                {"area": "Freshness", "status": "fail" if is_spoiled else "pass", "detail": f"Score {freshness:.2f}/1.0"},
-                {"area": "Packaging", "status": "fail" if defects else "pass", "detail": f"{len(defects) if isinstance(defects, list) else 0} defect(s)"},
-                {"area": "Contamination Risk", "status": contamination.get("overall_risk_level", "pass") if isinstance(contamination, dict) else "pass", "detail": contamination.get("overall_risk_level", "none") if isinstance(contamination, dict) else "none"},
+                {
+                    "area": "Food Classification",
+                    "status": "info",
+                    "detail": f"Identified as {food_type}",
+                },
+                {
+                    "area": "Freshness",
+                    "status": "fail" if is_spoiled else "pass",
+                    "detail": f"Score {freshness:.2f}/1.0",
+                },
+                {
+                    "area": "Packaging",
+                    "status": "fail" if defects else "pass",
+                    "detail": f"{len(defects) if isinstance(defects, list) else 0} defect(s)",
+                },
+                {
+                    "area": "Contamination Risk",
+                    "status": contamination.get("overall_risk_level", "pass")
+                    if isinstance(contamination, dict)
+                    else "pass",
+                    "detail": contamination.get("overall_risk_level", "none")
+                    if isinstance(contamination, dict)
+                    else "none",
+                },
                 {"area": "Shelf Life", "status": "info", "detail": f"{shelf_days} days remaining"},
             ],
             "risk_flags": risk_flags,

@@ -1,9 +1,9 @@
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 import pytest
 from httpx import ASGITransport, AsyncClient
 from fastapi import status
 
-from backend.main import app
+from main import app
 from backend.domain.models import UserModel
 from backend.domain.entities import UserRole, InspectionStatus
 from backend.core.dependencies import get_current_user, get_admin_user, get_db
@@ -73,10 +73,18 @@ def override_admin_deps(admin_user, mock_session):
 
 class TestHealthEndpoint:
     async def test_health_check(self):
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as ac:
-            response = await ac.get("/health")
+        with patch(
+            "backend.infrastructure.cache.CacheService.redis",
+            new_callable=PropertyMock,
+        ) as mock_redis_prop:
+            mock_redis = MagicMock()
+            mock_redis.ping = AsyncMock(return_value=True)
+            mock_redis_prop.return_value = mock_redis
+
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as ac:
+                response = await ac.get("/health")
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["status"] == "healthy"
@@ -187,7 +195,13 @@ class TestInspectionEndpoints:
             ) as ac:
                 response = await ac.post(
                     "/inspections/upload",
-                    files={"file": ("apple.jpg", b"test-image-data", "image/jpeg")},
+                    files={
+                        "file": (
+                            "apple.jpg",
+                            b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00",
+                            "image/jpeg",
+                        )
+                    },
                     headers={"Authorization": "Bearer test-token"},
                 )
             assert response.status_code == status.HTTP_201_CREATED

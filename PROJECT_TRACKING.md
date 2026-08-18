@@ -76,6 +76,8 @@ This file tracks the complete development progress of the FoodShield AI system. 
 | 4.6 | Inspection history & search | ✅ | 2026-07-27 | Paginated history list with cards |
 | 4.7 | Admin dashboard | ✅ | 2026-07-27 | User table, health status, inspection stats |
 | 4.8 | Responsive design & mobile support | ✅ | 2026-07-27 | Tailwind responsive grid, mobile-friendly UI |
+| 4.9 | PWA shell (manifest, service worker) | ✅ | 2026-08-13 | manifest.json + sw.js, installable app shell |
+| 4.10 | Frontend unit test setup (Jest + RTL) | ✅ | 2026-08-13 | jest.config.js, frontend.test.tsx |
 
 ## Phase 5: MLOps Pipeline
 
@@ -137,6 +139,22 @@ This file tracks the complete development progress of the FoodShield AI system. 
 
 ---
 
+## Phase 10: Hardening & Code Quality (Aug 2026)
+
+| # | Task | Status | Completed | Notes |
+|---|------|--------|-----------|-------|
+| 10.1 | Frontend inspection UI bug fixes & hardening | ✅ | 2026-08-17 | Upload/result/history/delete flows, retry & timeout handling, typed API contracts (`lib/types.ts`), theme flash prevention (`_document.tsx`) |
+| 10.2 | Frontend i18n expansion (EN/ES) | ✅ | 2026-08-17 | ~25 new strings: register validation, upload/analysis status, errors, delete confirmation |
+| 10.3 | Backend timezone-aware timestamps | ✅ | 2026-08-18 | `backend/core/time.py` (utc_now), `DateTime(timezone=True)` on users/inspections, Alembic migration 002 |
+| 10.4 | Fix DB enum value persistence | ✅ | 2026-08-18 | `values_callable` lowercase enum values, `checkfirst` type creation in migration 001 |
+| 10.5 | Replace passlib with direct bcrypt | ✅ | 2026-08-18 | `hashpw`/`checkpw`, malformed-hash handling in `security.py` |
+| 10.6 | Fix asyncpg InvalidCachedStatementError | ✅ | 2026-08-18 | Unique prepared statement names per call in `database.py` |
+| 10.7 | Ruff lint/format pass (backend, aiengine, mlops, tests) | ✅ | 2026-08-18 | Import sorting, type annotations, error chaining (`raise ... from e`), pyproject ruff config (FastAPI immutable-calls) |
+| 10.8 | Fix `ai_engine` → `aiengine` package imports | ✅ | 2026-08-18 | Module paths corrected across models, OCR, XAI, training, evaluation |
+| 10.9 | Update backend unit tests | ✅ | 2026-08-18 | Timezone-aware datetimes, valid JPEG magic-byte fixture, mocked Redis health check |
+
+---
+
 ## Summary
 
 | Phase | Total Tasks | Completed | In Progress | Pending |
@@ -144,10 +162,11 @@ This file tracks the complete development progress of the FoodShield AI system. 
 | 1. Foundation & Architecture | 8 | 8 | 0 | 0 |
 | 2. Backend API | 10 | 10 | 0 | 0 |
 | 3. AI Engine | 12 | 12 | 0 | 0 |
-| 4. Frontend | 8 | 8 | 0 | 0 |
+| 4. Frontend | 10 | 10 | 0 | 0 |
 | 5. MLOps | 7 | 7 | 0 | 0 |
-| 6. Infrastructure & DevOps | 8 | 5 | 0 | 3 |
-| 7. Testing & QA | 7 | 0 | 0 | 7 |
-| 8. Documentation | 5 | 0 | 0 | 5 |
+| 6. Infrastructure & DevOps | 8 | 6 | 0 | 2 |
+| 7. Testing & QA | 7 | 1 | 0 | 6 |
+| 8. Documentation | 5 | 0 | 1 | 4 |
 | 9. Future Enhancements | 6 | 0 | 0 | 6 |
-| **Total** | **71** | **51** | **0** | **20** |
+| 10. Hardening & Code Quality | 9 | 9 | 0 | 0 |
+| **Total** | **82** | **63** | **1** | **18** |

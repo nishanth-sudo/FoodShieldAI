@@ -1,23 +1,23 @@
-from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi import status as http_status
 
-from backend.domain.models import UserModel
-from backend.domain.schemas import InspectionResponse, InspectionListResponse
-from backend.core.use_cases import (
-    SubmitInspectionUseCase,
-    GetInspectionUseCase,
-    GetInspectionHistoryUseCase,
-    BatchSubmitInspectionUseCase,
-)
+from backend.config import settings
 from backend.core.dependencies import (
     get_current_user,
     get_inspection_repo,
 )
-from backend.infrastructure.repositories import InspectionRepository
-from backend.config import settings
-from backend.core.middleware import validate_image_bytes
 from backend.core.logging_config import get_logger
+from backend.core.middleware import validate_image_bytes
 from backend.core.rate_limit import limiter
+from backend.core.use_cases import (
+    BatchSubmitInspectionUseCase,
+    GetInspectionHistoryUseCase,
+    GetInspectionUseCase,
+    SubmitInspectionUseCase,
+)
+from backend.domain.models import UserModel
+from backend.domain.schemas import InspectionListResponse, InspectionResponse
+from backend.infrastructure.repositories import InspectionRepository
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/inspections", tags=["inspections"])
@@ -34,7 +34,7 @@ async def upload_inspection(
     file: UploadFile = File(...),
     current_user: UserModel = Depends(get_current_user),
     inspection_repo: InspectionRepository = Depends(get_inspection_repo),
-):
+) -> InspectionResponse:
     if file.content_type not in settings.allowed_image_types:
         raise HTTPException(
             status_code=http_status.HTTP_400_BAD_REQUEST,
@@ -60,7 +60,9 @@ async def upload_inspection(
         )
     except Exception as e:
         logger.error(f"Error submitting inspection: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal server error during upload")
+        raise HTTPException(
+            status_code=500, detail="Internal server error during upload"
+        ) from e
 
     return inspection
 
@@ -75,9 +77,12 @@ async def batch_upload_inspections(
     files: list[UploadFile] = File(...),
     current_user: UserModel = Depends(get_current_user),
     inspection_repo: InspectionRepository = Depends(get_inspection_repo),
-):
+) -> list[InspectionResponse]:
     if len(files) > settings.batch_max_files:
-        raise HTTPException(status_code=400, detail=f"Too many files. Max allowed: {settings.batch_max_files}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Too many files. Max allowed: {settings.batch_max_files}",
+        )
 
     processed_files = []
     for file in files:
@@ -95,7 +100,9 @@ async def batch_upload_inspections(
         inspections = await use_case.execute(user_id=current_user.id, image_files=processed_files)
     except Exception as e:
         logger.error(f"Error submitting batch inspection: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal server error during batch upload")
+        raise HTTPException(
+            status_code=500, detail="Internal server error during batch upload"
+        ) from e
 
     return inspections
 
@@ -105,7 +112,7 @@ async def get_inspection(
     inspection_id: str,
     current_user: UserModel = Depends(get_current_user),
     inspection_repo: InspectionRepository = Depends(get_inspection_repo),
-):
+) -> InspectionResponse:
     use_case = GetInspectionUseCase(inspection_repo)
     inspection = await use_case.execute(
         inspection_id=inspection_id,
@@ -125,7 +132,7 @@ async def list_inspections(
     limit: int = Query(20, ge=1, le=100),
     current_user: UserModel = Depends(get_current_user),
     inspection_repo: InspectionRepository = Depends(get_inspection_repo),
-):
+) -> InspectionListResponse:
     use_case = GetInspectionHistoryUseCase(inspection_repo)
     result = await use_case.execute(
         user_id=current_user.id,

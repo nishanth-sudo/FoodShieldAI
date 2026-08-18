@@ -117,6 +117,7 @@ class ModelDeployer:
 
     def _run_validation_tests(self, model_name: str) -> bool:
         import torch
+
         validation_dir = self.deploy_dir / "staging" / model_name
         pt_files = list(validation_dir.glob("*.pt"))
         if not pt_files:

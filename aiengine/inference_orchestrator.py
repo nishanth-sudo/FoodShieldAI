@@ -1,37 +1,43 @@
 import logging
 from concurrent.futures import ThreadPoolExecutor
 
-from ai_engine.preprocessing.pipeline import PreprocessingPipeline
-from ai_engine.models.food_classification.inference import FoodClassificationInference
-from ai_engine.models.spoilage_detection.inference import SpoilageDetectionInference
-from ai_engine.models.packaging_defect.model import PackagingDefectDetector
-from ai_engine.models.contamination_risk.model import ContaminationRiskInference
-from ai_engine.models.shelf_life_prediction.model import ShelfLifeInference
-from ai_engine.ocr.extractor import LabelTextExtractor
-from ai_engine.xai.explainer import XAIExplainer
-from ai_engine.llm_report_generator import LLMReportGenerator
+from PIL import Image
+
+from aiengine.llm_report_generator import LLMReportGenerator
+from aiengine.models.contamination_risk.model import ContaminationRiskInference
+from aiengine.models.food_classification.inference import FoodClassificationInference
+from aiengine.models.packaging_defect.model import PackagingDefectDetector
+from aiengine.models.shelf_life_prediction.model import ShelfLifeInference
+from aiengine.models.spoilage_detection.inference import SpoilageDetectionInference
+from aiengine.ocr.extractor import LabelTextExtractor
+from aiengine.preprocessing.pipeline import PreprocessingPipeline
+from aiengine.xai.explainer import XAIExplainer
 
 logger = logging.getLogger(__name__)
 
 
 class AIInferenceOrchestrator:
-    def __init__(self, config: dict | None = None):
+    def __init__(self, config: dict | None = None) -> None:
         self.config = config or {}
         self.executor = ThreadPoolExecutor(max_workers=4)
         self._init_models()
 
-    def _init_models(self):
+    def _init_models(self) -> None:
         device = self.config.get("device", "cpu")
         models_dir = self.config.get("models_dir", "")
 
         self.preprocessor = PreprocessingPipeline(device=device)
 
         self.food_classifier = FoodClassificationInference(
-            model_path=self.config.get("food_classification_model", f"{models_dir}/food_classification.pt"),
+            model_path=self.config.get(
+                "food_classification_model", f"{models_dir}/food_classification.pt"
+            ),
             device=device,
         )
         self.spoilage_detector = SpoilageDetectionInference(
-            model_path=self.config.get("spoilage_detection_model", f"{models_dir}/spoilage_detection.pt"),
+            model_path=self.config.get(
+                "spoilage_detection_model", f"{models_dir}/spoilage_detection.pt"
+            ),
             device=device,
         )
         self.defect_detector = PackagingDefectDetector(
@@ -39,7 +45,9 @@ class AIInferenceOrchestrator:
             model_path=self.config.get("packaging_defect_model", ""),
         )
         self.contamination_assessor = ContaminationRiskInference(
-            model_path=self.config.get("contamination_risk_model", f"{models_dir}/contamination_risk.pt"),
+            model_path=self.config.get(
+                "contamination_risk_model", f"{models_dir}/contamination_risk.pt"
+            ),
             device=device,
         )
         self.shelf_life_predictor = ShelfLifeInference(
@@ -57,7 +65,7 @@ class AIInferenceOrchestrator:
             temperature=self.config.get("llm_temperature", 0.3),
         )
 
-    def run_full_inspection(self, image) -> dict:
+    def run_full_inspection(self, image: Image.Image) -> dict:
         quality = self.preprocessor.check_quality(image)
 
         label_region = self.preprocessor.detect_label_region(image)
@@ -68,7 +76,9 @@ class AIInferenceOrchestrator:
             defect_future = pool.submit(self.defect_detector.detect, image)
             contamination_future = pool.submit(self.contamination_assessor.predict, image)
             shelf_future = pool.submit(self.shelf_life_predictor.predict, image)
-            ocr_future = pool.submit(self.ocr_extractor.extract_from_label_region, image, label_region)
+            ocr_future = pool.submit(
+                self.ocr_extractor.extract_from_label_region, image, label_region
+            )
 
             food_result = food_future.result()
             spoilage_result = spoilage_future.result()
@@ -101,7 +111,7 @@ class AIInferenceOrchestrator:
 
         return aggregated
 
-    def run_fast_inspection(self, image) -> dict:
+    def run_fast_inspection(self, image: Image.Image) -> dict:
         quality = self.preprocessor.check_quality(image)
         food_result = self.food_classifier.predict(image, top_k=3)
         spoilage_result = self.spoilage_detector.predict(image)

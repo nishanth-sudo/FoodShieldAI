@@ -1,8 +1,8 @@
-from ai_engine.inference_orchestrator import AIInferenceOrchestrator
-from ai_engine.preprocessing.pipeline import PreprocessingPipeline
-from ai_engine.ocr.extractor import LabelTextExtractor
-from ai_engine.xai.explainer import XAIExplainer
-from ai_engine.llm_report_generator import LLMReportGenerator
+from aiengine.inference_orchestrator import AIInferenceOrchestrator
+from aiengine.llm_report_generator import LLMReportGenerator
+from aiengine.ocr.extractor import LabelTextExtractor
+from aiengine.preprocessing.pipeline import PreprocessingPipeline
+from aiengine.xai.explainer import XAIExplainer
 
 __all__ = [
     "AIInferenceOrchestrator",

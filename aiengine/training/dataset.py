@@ -2,10 +2,11 @@ import random
 from pathlib import Path
 
 import torch
-from ai_engine.training.config import AugmentationConfig
 from PIL import Image
 from torch.utils.data import Dataset
-from torchvision import transforms as T
+from torchvision import transforms as T  # noqa: N812
+
+from aiengine.training.config import AugmentationConfig
 
 
 class FoodDataset(Dataset):
@@ -49,11 +50,13 @@ class FoodDataset(Dataset):
             self.transform = base if transform is None else transform
 
     def _make_base_transform(self) -> T.Compose:
-        return T.Compose([
-            T.Resize((224, 224)),
-            T.ToTensor(),
-            T.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
-        ])
+        return T.Compose(
+            [
+                T.Resize((224, 224)),
+                T.ToTensor(),
+                T.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+            ]
+        )
 
     def __len__(self) -> int:
         return len(self.image_paths)
@@ -86,11 +89,13 @@ class SpoilageDataset(Dataset):
         self.severity_scores = severity_scores
         self.aug_config = aug_config or AugmentationConfig()
 
-        base = T.Compose([
-            T.Resize((224, 224)),
-            T.ToTensor(),
-            T.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
-        ])
+        base = T.Compose(
+            [
+                T.Resize((224, 224)),
+                T.ToTensor(),
+                T.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+            ]
+        )
         if augment:
             aug_list = [
                 T.RandomHorizontalFlip(p=self.aug_config.horizontal_flip_prob),
@@ -130,11 +135,13 @@ class ShelfLifeDataset(Dataset):
         self.days_remaining = days_remaining
         self.label_features = label_features or [[0.5] * 10 for _ in image_paths]
 
-        base = T.Compose([
-            T.Resize((224, 224)),
-            T.ToTensor(),
-            T.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
-        ])
+        base = T.Compose(
+            [
+                T.Resize((224, 224)),
+                T.ToTensor(),
+                T.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+            ]
+        )
         self.transform = base if transform is None else transform
 
     def __len__(self) -> int:
@@ -167,10 +174,9 @@ def create_datasets(
     augment: bool = True,
 ) -> dict[str, Dataset]:
     image_extensions = {".jpg", ".jpeg", ".png", ".bmp", ".tiff"}
-    image_paths = sorted([
-        str(p) for p in Path(image_dir).rglob("*")
-        if p.suffix.lower() in image_extensions
-    ])
+    image_paths = sorted(
+        [str(p) for p in Path(image_dir).rglob("*") if p.suffix.lower() in image_extensions]
+    )
 
     random.seed(seed)
     random.shuffle(image_paths)
@@ -181,8 +187,8 @@ def create_datasets(
     n_train = n - n_val - n_test
 
     train_paths = image_paths[:n_train]
-    val_paths = image_paths[n_train:n_train + n_val]
-    test_paths = image_paths[n_train + n_val:]
+    val_paths = image_paths[n_train : n_train + n_val]
+    test_paths = image_paths[n_train + n_val :]
 
     return {
         "train_paths": train_paths,

@@ -1,5 +1,5 @@
+
 from pydantic_settings import BaseSettings
-from typing import Optional
 
 
 class Settings(BaseSettings):
@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     ai_engine_url: str = "http://ai-engine:8501"
     max_upload_size_mb: int = 10
     allowed_image_types: list[str] = ["image/jpeg", "image/png", "image/webp"]
-    
+
     rate_limit_enabled: bool = True
     rate_limit_requests_per_minute: int = 60
     log_level: str = "INFO"
@@ -39,7 +39,12 @@ class Settings(BaseSettings):
     cache_inspection_ttl: int = 600
     cache_result_ttl: int = 3600
 
-    model_config = {"env_prefix": "FOODSHIELD_", "env_file": ".env", "extra": "ignore"}
+    model_config = {
+        "env_prefix": "FOODSHIELD_",
+        "env_file": ".env",
+        "extra": "ignore",
+        "protected_namespaces": ("settings_",),
+    }
 
 
 settings = Settings()

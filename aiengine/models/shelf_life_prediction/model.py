@@ -1,10 +1,11 @@
 import torch
 import torch.nn as nn
+from PIL import Image
 from torchvision import models
 
 
 class ShelfLifePredictor(nn.Module):
-    def __init__(self, label_feature_dim: int = 64):
+    def __init__(self, label_feature_dim: int = 64) -> None:
         super().__init__()
         self.visual_backbone = models.efficientnet_b0(
             weights=models.EfficientNet_B0_Weights.IMAGENET1K_V1
@@ -41,19 +42,19 @@ class ShelfLifePredictor(nn.Module):
 
 
 class ShelfLifeInference:
-    def __init__(self, model_path: str, device: str = "cpu"):
+    def __init__(self, model_path: str, device: str = "cpu") -> None:
         self.device = device if torch.cuda.is_available() else "cpu"
         self.model = ShelfLifePredictor()
         checkpoint = torch.load(model_path, map_location=self.device, weights_only=True)
-        self.model.load_state_dict(checkpoint["model_state_dict"] if "model_state_dict" in checkpoint else checkpoint)
+        self.model.load_state_dict(checkpoint.get("model_state_dict", checkpoint))
         self.model.to(self.device)
         self.model.eval()
 
-        from ai_engine.preprocessing.pipeline import PreprocessingPipeline
+        from aiengine.preprocessing.pipeline import PreprocessingPipeline
+
         self.preprocessor = PreprocessingPipeline(device=self.device)
 
-    def predict(self, image, expiry_date: str | None = None) -> dict:
-        from PIL import Image
+    def predict(self, image: Image.Image, expiry_date: str | None = None) -> dict:
         import datetime
 
         if not isinstance(image, Image.Image):

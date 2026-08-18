@@ -1,12 +1,13 @@
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
+
 from backend.config import settings
 from backend.core.logging_config import get_logger
 
 logger = get_logger(__name__)
 
 class AIEngineService:
-    def __init__(self):
+    def __init__(self) -> None:
         self.base_url = settings.ai_engine_url
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))

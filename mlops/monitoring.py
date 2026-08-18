@@ -16,8 +16,11 @@ class PredictionLogger:
         self._buffer: list[dict] = []
 
     def log(
-        self, model_name: str, features: dict,
-        prediction: dict, latency_ms: float | None = None,
+        self,
+        model_name: str,
+        features: dict,
+        prediction: dict,
+        latency_ms: float | None = None,
     ) -> None:
         record = {
             "model_name": model_name,
@@ -64,7 +67,9 @@ class ModelMonitor:
         self.reference_dir = Path(reference_dir)
         self.reference_dir.mkdir(parents=True, exist_ok=True)
 
-    def log_prediction(self, model_name: str, features: dict, prediction: dict, latency_ms: float | None = None) -> None:
+    def log_prediction(
+        self, model_name: str, features: dict, prediction: dict, latency_ms: float | None = None
+    ) -> None:
         self.logger.log(model_name, features, prediction, latency_ms)
 
     def compute_feature_statistics(self, model_name: str, max_samples: int = 5000) -> dict:
@@ -213,7 +218,9 @@ class ModelMonitor:
         ref_proportions = np.clip(ref_proportions, 1e-4, None)
         cur_proportions = np.clip(cur_proportions, 1e-4, None)
 
-        psi = np.sum((cur_proportions - ref_proportions) * np.log(cur_proportions / ref_proportions))
+        psi = np.sum(
+            (cur_proportions - ref_proportions) * np.log(cur_proportions / ref_proportions)
+        )
         return float(psi)
 
     @staticmethod
@@ -223,12 +230,12 @@ class ModelMonitor:
         cur_mean = current.get("mean", 0)
         cur_std = current.get("std", 1)
 
-        var_ref = ref_std ** 2
-        var_cur = cur_std ** 2
+        var_ref = ref_std**2
+        var_cur = cur_std**2
         mean_diff = cur_mean - ref_mean
 
         js = 0.5 * (
-            np.log(np.sqrt((var_ref + var_cur + mean_diff ** 2) / (2 * var_ref))) +
-            np.log(np.sqrt((var_ref + var_cur + mean_diff ** 2) / (2 * var_cur)))
+            np.log(np.sqrt((var_ref + var_cur + mean_diff**2) / (2 * var_ref)))
+            + np.log(np.sqrt((var_ref + var_cur + mean_diff**2) / (2 * var_cur)))
         )
         return float(min(js, 1.0))

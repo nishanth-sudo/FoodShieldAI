@@ -50,4 +50,5 @@ def mock_cache():
         m.get = AsyncMock(return_value=None)
         m.set = AsyncMock(return_value=True)
         m.delete = AsyncMock(return_value=True)
+        m.get_by_image_hash = AsyncMock(return_value=None)
         yield m

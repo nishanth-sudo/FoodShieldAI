@@ -46,8 +46,8 @@ def prepare_freshness44(
 
     splits = {
         "train": (image_paths[:n_train], labels[:n_train]),
-        "val": (image_paths[n_train:n_train + n_val], labels[n_train:n_train + n_val]),
-        "test": (image_paths[n_train + n_val:], labels[n_train + n_val:]),
+        "val": (image_paths[n_train : n_train + n_val], labels[n_train : n_train + n_val]),
+        "test": (image_paths[n_train + n_val :], labels[n_train + n_val :]),
     }
 
     metadata = {
@@ -92,8 +92,12 @@ def prepare_food101(
     train_json_path = meta_dir / "train.json"
     test_json_path = meta_dir / "test.json"
 
-    classes = [line.strip().split(maxsplit=1)[1] for line in classes_path.read_text().strip().splitlines()]
-    human_labels = [line.strip().split(maxsplit=1)[1] for line in labels_path.read_text().strip().splitlines()]
+    classes = [
+        line.strip().split(maxsplit=1)[1] for line in classes_path.read_text().strip().splitlines()
+    ]
+    human_labels = [
+        line.strip().split(maxsplit=1)[1] for line in labels_path.read_text().strip().splitlines()
+    ]
 
     class_to_idx = {cls: i for i, cls in enumerate(classes)}
     train_data = _json.loads(train_json_path.read_text())
@@ -124,7 +128,9 @@ def prepare_food101(
     }
     (output_path / "dataset.json").write_text(json.dumps(metadata, indent=2))
 
-    print(f"Food101 prepared: {sum(len(v) for v in train_data.values())} train, {sum(len(v) for v in test_data.values())} test")
+    train_count = sum(len(v) for v in train_data.values())
+    test_count = sum(len(v) for v in test_data.values())
+    print(f"Food101 prepared: {train_count} train, {test_count} test")
     print(f"Classes: {len(classes)}")
     return metadata
 

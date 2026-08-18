@@ -1,15 +1,16 @@
 import torch
 from PIL import Image
-from ai_engine.models.spoilage_detection.model import SpoilageDetector
-from ai_engine.preprocessing.pipeline import PreprocessingPipeline
+
+from aiengine.models.spoilage_detection.model import SpoilageDetector
+from aiengine.preprocessing.pipeline import PreprocessingPipeline
 
 
 class SpoilageDetectionInference:
-    def __init__(self, model_path: str, backbone: str = "resnet34", device: str = "cpu"):
+    def __init__(self, model_path: str, backbone: str = "resnet34", device: str = "cpu") -> None:
         self.device = device if torch.cuda.is_available() else "cpu"
         self.model = SpoilageDetector(backbone=backbone)
         checkpoint = torch.load(model_path, map_location=self.device, weights_only=True)
-        self.model.load_state_dict(checkpoint["model_state_dict"] if "model_state_dict" in checkpoint else checkpoint)
+        self.model.load_state_dict(checkpoint.get("model_state_dict", checkpoint))
         self.model.to(self.device)
         self.model.eval()
         self.preprocessor = PreprocessingPipeline(device=self.device)

@@ -1,4 +1,7 @@
-from ai_engine.models.food_classification.model import FoodClassifier
-from ai_engine.models.food_classification.inference import FoodClassificationInference, FOOD_CATEGORIES
+from aiengine.models.food_classification.inference import (
+    FOOD_CATEGORIES,
+    FoodClassificationInference,
+)
+from aiengine.models.food_classification.model import FoodClassifier
 
 __all__ = ["FoodClassifier", "FoodClassificationInference", "FOOD_CATEGORIES"]

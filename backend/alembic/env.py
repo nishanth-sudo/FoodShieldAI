@@ -1,9 +1,10 @@
 from logging.config import fileConfig
-from sqlalchemy import engine_from_config, pool
-from alembic import context
 
-from backend.domain.models import Base
+from alembic import context
+from sqlalchemy import engine_from_config, pool
+
 from backend.config import settings
+from backend.domain.models import Base
 
 config = context.config
 

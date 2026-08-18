@@ -6,10 +6,11 @@ from pathlib import Path
 import numpy as np
 import torch
 import torch.nn as nn
-from aiengine.training.config import TrainingConfig
 from torch.optim.lr_scheduler import CosineAnnealingLR, ReduceLROnPlateau, StepLR
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
+
+from aiengine.training.config import TrainingConfig
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,9 @@ class ModelTrainer:
         self.best_epoch = -1
         self.patience_counter = 0
         self.history: dict[str, list[float]] = {
-            "train_loss": [], "val_loss": [], "val_metric": [],
+            "train_loss": [],
+            "val_loss": [],
+            "val_metric": [],
         }
 
     def _setup_seed(self) -> None:
@@ -44,18 +47,22 @@ class ModelTrainer:
         config = self.config
         if config.model_type == "food_classification":
             from aiengine.models.food_classification.model import FoodClassifier
+
             return FoodClassifier(
                 num_classes=config.num_classes,
                 backbone=config.backbone,
             )
         elif config.model_type == "spoilage_detection":
             from aiengine.models.spoilage_detection.model import SpoilageDetector
+
             return SpoilageDetector(backbone=config.backbone)
         elif config.model_type == "shelf_life_prediction":
             from aiengine.models.shelf_life_prediction.model import ShelfLifePredictor
+
             return ShelfLifePredictor(label_feature_dim=config.label_feature_dim)
         elif config.model_type == "contamination_risk":
             from aiengine.models.contamination_risk.model import ContaminationRiskAssessor
+
             return ContaminationRiskAssessor(
                 num_risk_categories=config.num_risk_categories,
                 backbone=config.backbone,
@@ -63,6 +70,7 @@ class ModelTrainer:
         elif config.model_type == "packaging_defect":
             try:
                 from ultralytics import YOLO
+
                 return YOLO("yolov8n.pt")
             except ImportError as err:
                 raise ImportError("ultralytics is required for packaging defect training") from err
@@ -92,7 +100,8 @@ class ModelTrainer:
             return StepLR(self.optimizer, step_size=self.config.step_size, gamma=self.config.gamma)
         elif t == "plateau":
             return ReduceLROnPlateau(
-                self.optimizer, mode="max",
+                self.optimizer,
+                mode="max",
                 patience=self.config.early_stopping_patience // 2,
             )
         return None
@@ -158,8 +167,7 @@ class ModelTrainer:
             if batch_idx % self.config.log_interval == 0:
                 elapsed = time.time() - start_time
                 logger.debug(
-                    f"Train batch [{batch_idx}/{num_batches}] "
-                    f"Loss: {loss:.4f} ({elapsed:.1f}s)"
+                    f"Train batch [{batch_idx}/{num_batches}] Loss: {loss:.4f} ({elapsed:.1f}s)"
                 )
 
         return total_loss / num_batches
@@ -247,10 +255,12 @@ class ModelTrainer:
                     severity_target = targets["severity"].to(self.device).view(-1, 1)
                     outputs = self.model(images)
                     loss_spoilage = self.loss_fn["spoilage"](
-                        outputs["spoilage_logit"], spoilage_target,
+                        outputs["spoilage_logit"],
+                        spoilage_target,
                     )
                     loss_severity = self.loss_fn["severity"](
-                        outputs["severity"], severity_target,
+                        outputs["severity"],
+                        severity_target,
                     )
                     loss = loss_spoilage + 0.5 * loss_severity
                     all_preds.append(torch.sigmoid(outputs["spoilage_logit"]))
@@ -333,9 +343,7 @@ class ModelTrainer:
             start_time = time.time()
 
             train_loss = self._train_epoch(train_loader)
-            val_loss, val_metric = (
-                self._validate(val_loader) if val_loader else (train_loss, 0.0)
-            )
+            val_loss, val_metric = self._validate(val_loader) if val_loader else (train_loss, 0.0)
 
             self.history["train_loss"].append(train_loss)
             self.history["val_loss"].append(val_loss)
@@ -374,17 +382,14 @@ class ModelTrainer:
                 self.save_checkpoint(checkpoint_path, epoch, val_metric, is_best=is_best)
 
             if self.patience_counter >= config.early_stopping_patience:
-                logger.info(
-                    f"Early stopping at epoch {epoch}. Best epoch: {self.best_epoch}"
-                )
+                logger.info(f"Early stopping at epoch {epoch}. Best epoch: {self.best_epoch}")
                 break
 
             self._log_mlflow(epoch, train_loss, val_loss, val_metric)
 
         self.writer.close()
         logger.info(
-            f"Training complete. Best metric: {self.best_metric:.4f} "
-            f"at epoch {self.best_epoch}"
+            f"Training complete. Best metric: {self.best_metric:.4f} at epoch {self.best_epoch}"
         )
         return self.history
 
@@ -439,19 +444,27 @@ class ModelTrainer:
         return results
 
     def _log_mlflow(
-        self, epoch: int, train_loss: float, val_loss: float, val_metric: float,
+        self,
+        epoch: int,
+        train_loss: float,
+        val_loss: float,
+        val_metric: float,
     ) -> None:
         if not self.config.mlflow_tracking_uri:
             return
         try:
             import mlflow
+
             if not mlflow.active_run():
                 mlflow.set_tracking_uri(self.config.mlflow_tracking_uri)
                 mlflow.start_run(run_name=self.config.experiment_name, nested=True)
-            mlflow.log_metrics({
-                "train_loss": train_loss,
-                "val_loss": val_loss,
-                "val_metric": val_metric,
-            }, step=epoch)
+            mlflow.log_metrics(
+                {
+                    "train_loss": train_loss,
+                    "val_loss": val_loss,
+                    "val_metric": val_metric,
+                },
+                step=epoch,
+            )
         except ImportError:
             pass

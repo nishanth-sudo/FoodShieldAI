@@ -2,8 +2,10 @@ from dataclasses import dataclass
 from typing import Literal
 
 ModelType = Literal[
-    "food_classification", "spoilage_detection",
-    "shelf_life_prediction", "contamination_risk",
+    "food_classification",
+    "spoilage_detection",
+    "shelf_life_prediction",
+    "contamination_risk",
     "packaging_defect",
 ]
 

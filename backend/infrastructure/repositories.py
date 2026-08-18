@@ -1,14 +1,14 @@
-from datetime import datetime
-from typing import Optional
-from sqlalchemy import select, func, delete
+
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.domain.models import UserModel, InspectionModel
+from backend.core.time import utc_now
 from backend.domain.entities import InspectionStatus
+from backend.domain.models import InspectionModel, UserModel
 
 
 class UserRepository:
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
     async def create(self, email: str, hashed_password: str, name: str, role: str) -> UserModel:
@@ -22,13 +22,13 @@ class UserRepository:
         await self.session.flush()
         return user
 
-    async def get_by_id(self, user_id: str) -> Optional[UserModel]:
+    async def get_by_id(self, user_id: str) -> UserModel | None:
         result = await self.session.execute(
             select(UserModel).where(UserModel.id == user_id)
         )
         return result.scalar_one_or_none()
 
-    async def get_by_email(self, email: str) -> Optional[UserModel]:
+    async def get_by_email(self, email: str) -> UserModel | None:
         result = await self.session.execute(
             select(UserModel).where(UserModel.email == email)
         )
@@ -42,7 +42,7 @@ class UserRepository:
 
 
 class InspectionRepository:
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
     async def create(self, user_id: str, image_url: str) -> InspectionModel:
@@ -55,7 +55,7 @@ class InspectionRepository:
         await self.session.flush()
         return inspection
 
-    async def get_by_id(self, inspection_id: str) -> Optional[InspectionModel]:
+    async def get_by_id(self, inspection_id: str) -> InspectionModel | None:
         result = await self.session.execute(
             select(InspectionModel).where(InspectionModel.id == inspection_id)
         )
@@ -93,7 +93,7 @@ class InspectionRepository:
         xai_heatmap_url: str = None,
         confidence_scores: dict = None,
         report: str = None,
-    ) -> Optional[InspectionModel]:
+    ) -> InspectionModel | None:
         inspection = await self.get_by_id(inspection_id)
         if not inspection:
             return None
@@ -122,12 +122,12 @@ class InspectionRepository:
 
     async def update_status(
         self, inspection_id: str, status: InspectionStatus
-    ) -> Optional[InspectionModel]:
+    ) -> InspectionModel | None:
         inspection = await self.get_by_id(inspection_id)
         if not inspection:
             return None
         inspection.status = status
         if status == InspectionStatus.COMPLETED:
-            inspection.completed_at = datetime.utcnow()
+            inspection.completed_at = utc_now()
         await self.session.flush()
         return inspection

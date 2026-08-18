@@ -8,9 +8,9 @@ from torch.utils.data import DataLoader
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from ai_engine.training.config import AugmentationConfig, TrainingConfig
-from ai_engine.training.dataset import SpoilageDataset
-from ai_engine.training.trainer import ModelTrainer
+from aiengine.training.config import AugmentationConfig, TrainingConfig
+from aiengine.training.dataset import SpoilageDataset
+from aiengine.training.trainer import ModelTrainer
 
 logger = logging.getLogger(__name__)
 
@@ -91,4 +91,7 @@ def run_spoilage_training(
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     result = run_spoilage_training()
-    print(f"Training completed. Best metric: {result['best_metric']:.4f} at epoch {result['best_epoch']}")
+    print(
+        "Training completed. "
+        f"Best metric: {result['best_metric']:.4f} at epoch {result['best_epoch']}"
+    )

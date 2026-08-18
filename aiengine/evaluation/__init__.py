@@ -1,5 +1,5 @@
-from ai_engine.evaluation.benchmark import BenchmarkResult, ModelBenchmark
-from ai_engine.evaluation.metrics import ModelMetrics
+from aiengine.evaluation.benchmark import BenchmarkResult, ModelBenchmark
+from aiengine.evaluation.metrics import ModelMetrics
 
 __all__ = [
     "ModelMetrics",

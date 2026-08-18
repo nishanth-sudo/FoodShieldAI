@@ -1,26 +1,27 @@
 import cv2
 import numpy as np
 import torch
-import torchvision.transforms as T
+import torchvision.transforms as T  # noqa: N812
 from PIL import Image
-from typing import Tuple, Optional
 
 
 class PreprocessingPipeline:
     def __init__(
         self,
-        target_size: Tuple[int, int] = (224, 224),
-        mean: Tuple[float, ...] = (0.485, 0.456, 0.406),
-        std: Tuple[float, ...] = (0.229, 0.224, 0.225),
+        target_size: tuple[int, int] = (224, 224),
+        mean: tuple[float, ...] = (0.485, 0.456, 0.406),
+        std: tuple[float, ...] = (0.229, 0.224, 0.225),
         device: str = "cpu",
-    ):
+    ) -> None:
         self.target_size = target_size
         self.device = device
-        self.transforms = T.Compose([
-            T.Resize(target_size),
-            T.ToTensor(),
-            T.Normalize(mean=mean, std=std),
-        ])
+        self.transforms = T.Compose(
+            [
+                T.Resize(target_size),
+                T.ToTensor(),
+                T.Normalize(mean=mean, std=std),
+            ]
+        )
 
     def process(self, image: Image.Image) -> torch.Tensor:
         if image.mode != "RGB":
@@ -30,7 +31,7 @@ class PreprocessingPipeline:
     def process_batch(self, images: list[Image.Image]) -> torch.Tensor:
         return torch.cat([self.process(img) for img in images], dim=0)
 
-    def detect_label_region(self, image: Image.Image) -> Optional[Image.Image]:
+    def detect_label_region(self, image: Image.Image) -> Image.Image | None:
         img_cv = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
         gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
         _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
@@ -59,9 +60,11 @@ class PreprocessingPipeline:
         }
 
     def augment(self, image: Image.Image) -> list[Image.Image]:
-        augs = T.Compose([
-            T.RandomHorizontalFlip(p=0.5),
-            T.RandomRotation(degrees=15),
-            T.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
-        ])
+        augs = T.Compose(
+            [
+                T.RandomHorizontalFlip(p=0.5),
+                T.RandomRotation(degrees=15),
+                T.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
+            ]
+        )
         return [augs(image) for _ in range(4)]

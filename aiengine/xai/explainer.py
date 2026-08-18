@@ -1,17 +1,16 @@
-import io
-from PIL import Image
-
-import torch
 import numpy as np
+import torch
 
 
 class XAIExplainer:
-    def __init__(self, method: str = "gradcam"):
+    def __init__(self, method: str = "gradcam") -> None:
         self.method = method
         self._supported_methods = {"gradcam", "lime", "shap"}
 
         if method not in self._supported_methods:
-            raise ValueError(f"Unsupported XAI method: {method}. Choose from {self._supported_methods}")
+            raise ValueError(
+                f"Unsupported XAI method: {method}. Choose from {self._supported_methods}"
+            )
 
     def generate_heatmap(
         self,
@@ -46,9 +45,13 @@ class XAIExplainer:
         if "shelf_life" in prediction:
             sl = prediction["shelf_life"]
             if isinstance(sl, dict):
-                parts.append(f"Estimated shelf life: **{sl.get('estimated_days_remaining', 'N/A')} days** remaining.")
+                days_remaining = sl.get("estimated_days_remaining", "N/A")
+                parts.append(f"Estimated shelf life: **{days_remaining} days** remaining.")
 
-        model_focus = "The model focused on the central region of the image, particularly texture and color variations."
+        model_focus = (
+            "The model focused on the central region of the image, "
+            "particularly texture and color variations."
+        )
         parts.append(f"\n_{model_focus}_")
 
         return " ".join(parts)
@@ -69,10 +72,12 @@ class XAIExplainer:
         gradients = []
         activations = []
 
-        def forward_hook(module, input, output):
+        def forward_hook(
+            module: torch.nn.Module, input: torch.Tensor, output: torch.Tensor
+        ) -> None:
             activations.append(output)
 
-        def backward_hook(module, grad_input, grad_output):
+        def backward_hook(module: torch.nn.Module, grad_input: tuple, grad_output: tuple) -> None:
             gradients.append(grad_output[0])
 
         fwd_handle = target_layer.register_forward_hook(forward_hook)
@@ -136,24 +141,27 @@ class XAIExplainer:
         heatmap_np = np.zeros((h, w), dtype=np.uint8)
         center = np.ones((h // 3, w // 3), dtype=np.uint8) * 200
         y_off, x_off = h // 3, w // 3
-        heatmap_np[y_off:y_off + center.shape[0], x_off:x_off + center.shape[1]] = center
+        heatmap_np[y_off : y_off + center.shape[0], x_off : x_off + center.shape[1]] = center
         return {
             "heatmap_array": heatmap_np.tolist(),
             "heatmap_overlay": None,
             "target_class": 0,
             "method": "fallback",
-            "regions_of_interest": [{"x": x_off, "y": y_off, "width": w // 3, "height": h // 3, "importance": 0.8}],
+            "regions_of_interest": [
+                {"x": x_off, "y": y_off, "width": w // 3, "height": h // 3, "importance": 0.8}
+            ],
         }
 
-    def _find_last_conv_layer(self, model: torch.nn.Module):
+    def _find_last_conv_layer(self, model: torch.nn.Module) -> torch.nn.Module | None:
         last_conv = None
-        for name, module in model.named_modules():
+        for _, module in model.named_modules():
             if isinstance(module, torch.nn.Conv2d):
                 last_conv = module
         return last_conv
 
     def _create_overlay(self, image: np.ndarray, heatmap: np.ndarray) -> list:
         import cv2
+
         heatmap_resized = cv2.resize(heatmap, (image.shape[1], image.shape[0]))
         heatmap_colored = cv2.applyColorMap(heatmap_resized, cv2.COLORMAP_JET)
         overlay = cv2.addWeighted(image, 0.6, heatmap_colored, 0.4, 0)
@@ -163,10 +171,13 @@ class XAIExplainer:
     def _extract_roi(self, heatmap: np.ndarray, threshold: float = 0.7) -> list[dict]:
         binary = (heatmap > threshold * 255).astype(np.uint8) * 255
         import cv2
+
         contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         regions = []
         for cnt in contours:
             x, y, w, h = cv2.boundingRect(cnt)
-            importance = float(heatmap[y:y+h, x:x+w].mean() / 255.0)
-            regions.append({"x": x, "y": y, "width": w, "height": h, "importance": round(importance, 3)})
+            importance = float(heatmap[y : y + h, x : x + w].mean() / 255.0)
+            regions.append(
+                {"x": x, "y": y, "width": w, "height": h, "importance": round(importance, 3)}
+            )
         return sorted(regions, key=lambda r: r["importance"], reverse=True)

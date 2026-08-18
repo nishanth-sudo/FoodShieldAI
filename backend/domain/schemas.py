@@ -1,7 +1,8 @@
 from datetime import datetime
-from typing import Optional
+
 from pydantic import BaseModel, EmailStr, Field
-from .entities import UserRole, InspectionStatus
+
+from .entities import InspectionStatus, UserRole
 
 
 class UserCreate(BaseModel):
@@ -11,11 +12,11 @@ class UserCreate(BaseModel):
 
 
 class UserResponse(BaseModel):
-    id: Optional[str] = None
+    id: str | None = None
     email: str
     name: str
     role: UserRole
-    created_at: Optional[datetime] = None
+    created_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 
@@ -35,18 +36,18 @@ class InspectionResponse(BaseModel):
     id: str
     status: InspectionStatus
     image_url: str
-    image_thumbnail_url: Optional[str] = None
-    food_type: Optional[str] = None
-    freshness_score: Optional[float] = None
-    shelf_life_days: Optional[int] = None
-    packaging_defects: Optional[list] = None
-    contamination_risks: Optional[dict] = None
-    ocr_data: Optional[dict] = None
-    xai_heatmap_url: Optional[str] = None
-    confidence_scores: Optional[dict] = None
-    report: Optional[str] = None
-    created_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
+    image_thumbnail_url: str | None = None
+    food_type: str | None = None
+    freshness_score: float | None = None
+    shelf_life_days: int | None = None
+    packaging_defects: list | None = None
+    contamination_risks: dict | None = None
+    ocr_data: dict | None = None
+    xai_heatmap_url: str | None = None
+    confidence_scores: dict | None = None
+    report: str | None = None
+    created_at: datetime | None = None
+    completed_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 
@@ -60,4 +61,4 @@ class InspectionListResponse(BaseModel):
 
 class ErrorResponse(BaseModel):
     detail: str
-    code: Optional[str] = None
+    code: str | None = None

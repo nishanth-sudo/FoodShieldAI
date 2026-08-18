@@ -1,8 +1,10 @@
 import json
 import os
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Optional, List
+
+from backend.core.time import utc_now
+
 
 @dataclass
 class ModelVersion:
@@ -15,39 +17,41 @@ class ModelVersion:
     created_at: datetime
 
 class ModelRegistry:
-    def __init__(self, registry_path: str = 'models/registry.json'):
+    def __init__(self, registry_path: str = 'models/registry.json') -> None:
         self.registry_path = registry_path
         os.makedirs(os.path.dirname(self.registry_path), exist_ok=True)
 
     def load_registry(self) -> dict:
         if os.path.exists(self.registry_path):
-            with open(self.registry_path, 'r') as f:
+            with open(self.registry_path) as f:
                 return json.load(f)
         return {}
 
-    def save_registry(self, data: dict):
+    def save_registry(self, data: dict) -> None:
         with open(self.registry_path, 'w') as f:
             json.dump(data, f, indent=4, default=str)
 
-    def register_model(self, model_name: str, version: str, model_path: str, metrics: dict) -> ModelVersion:
+    def register_model(
+        self, model_name: str, version: str, model_path: str, metrics: dict
+    ) -> ModelVersion:
         registry = self.load_registry()
         if model_name not in registry:
             registry[model_name] = []
-        
+
         new_version = ModelVersion(
             version_id=version,
             model_name=model_name,
-            training_date=datetime.utcnow(),
+            training_date=utc_now(),
             metrics=metrics,
             model_path=model_path,
             is_active=False,
-            created_at=datetime.utcnow()
+            created_at=utc_now()
         )
         registry[model_name].append(asdict(new_version))
         self.save_registry(registry)
         return new_version
 
-    def get_active_version(self, model_name: str) -> Optional[ModelVersion]:
+    def get_active_version(self, model_name: str) -> ModelVersion | None:
         registry = self.load_registry()
         versions = registry.get(model_name, [])
         for v in versions:
@@ -69,12 +73,12 @@ class ModelRegistry:
             self.save_registry(registry)
         return found
 
-    def list_versions(self, model_name: str) -> List[ModelVersion]:
+    def list_versions(self, model_name: str) -> list[ModelVersion]:
         registry = self.load_registry()
         versions = registry.get(model_name, [])
         return [ModelVersion(**v) for v in versions]
 
-    def get_version(self, model_name: str, version_id: str) -> Optional[ModelVersion]:
+    def get_version(self, model_name: str, version_id: str) -> ModelVersion | None:
         registry = self.load_registry()
         versions = registry.get(model_name, [])
         for v in versions:

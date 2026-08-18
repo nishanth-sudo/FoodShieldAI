@@ -1,6 +1,7 @@
-from datetime import datetime
-from backend.domain.entities import UserRole, InspectionStatus, User, FoodInspection
-from backend.domain.schemas import UserCreate, LoginRequest, InspectionResponse
+from datetime import UTC, datetime
+
+from backend.domain.entities import FoodInspection, InspectionStatus, User, UserRole
+from backend.domain.schemas import InspectionResponse, LoginRequest, UserCreate
 
 
 class TestUserRole:
@@ -59,7 +60,7 @@ class TestFoodInspectionEntity:
         assert inspection.status == InspectionStatus.PENDING
 
     def test_inspection_with_all_fields(self):
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         inspection = FoodInspection(
             id="i3",
             user_id="u1",
@@ -98,7 +99,7 @@ class TestSchemas:
             image_url="http://test.com/img.jpg",
             food_type="Banana",
             freshness_score=90.0,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(UTC),
         )
         assert data.food_type == "Banana"
         assert data.freshness_score == 90.0

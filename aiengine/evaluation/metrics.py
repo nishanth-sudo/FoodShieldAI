@@ -151,7 +151,7 @@ class ModelMetrics:
 
         errors = y_true - y_pred
         abs_errors = np.abs(errors)
-        squared_errors = errors ** 2
+        squared_errors = errors**2
 
         mae = float(np.mean(abs_errors))
         mse = float(np.mean(squared_errors))

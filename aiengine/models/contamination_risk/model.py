@@ -1,18 +1,24 @@
 import torch
 import torch.nn as nn
+from PIL import Image
 from torchvision import models
 
-
 RISK_CATEGORIES = [
-    "biological_mold", "biological_bacteria", "biological_yeast",
-    "chemical_pesticide", "chemical_cleaning_agent", "chemical_preservative",
-    "physical_glass", "physical_metal", "physical_plastic",
+    "biological_mold",
+    "biological_bacteria",
+    "biological_yeast",
+    "chemical_pesticide",
+    "chemical_cleaning_agent",
+    "chemical_preservative",
+    "physical_glass",
+    "physical_metal",
+    "physical_plastic",
     "physical_stone",
 ]
 
 
 class ContaminationRiskAssessor(nn.Module):
-    def __init__(self, num_risk_categories: int = 10, backbone: str = "resnet50"):
+    def __init__(self, num_risk_categories: int = 10, backbone: str = "resnet50") -> None:
         super().__init__()
         self.num_categories = num_risk_categories
 
@@ -21,7 +27,9 @@ class ContaminationRiskAssessor(nn.Module):
             in_features = self.backbone.fc.in_features
             self.backbone.fc = nn.Identity()
         elif backbone == "efficientnet_b0":
-            self.backbone = models.efficientnet_b0(weights=models.EfficientNet_B0_Weights.IMAGENET1K_V1)
+            self.backbone = models.efficientnet_b0(
+                weights=models.EfficientNet_B0_Weights.IMAGENET1K_V1
+            )
             in_features = self.backbone.classifier[1].in_features
             self.backbone.classifier = nn.Identity()
         else:
@@ -50,7 +58,7 @@ class ContaminationRiskInference:
         device: str = "cpu",
         threshold: float = 0.3,
         risk_categories: list[str] | None = None,
-    ):
+    ) -> None:
         self.device = device if torch.cuda.is_available() else "cpu"
         self.threshold = threshold
         self.risk_categories = risk_categories or RISK_CATEGORIES
@@ -59,15 +67,15 @@ class ContaminationRiskInference:
             backbone=backbone,
         )
         checkpoint = torch.load(model_path, map_location=self.device, weights_only=True)
-        self.model.load_state_dict(checkpoint["model_state_dict"] if "model_state_dict" in checkpoint else checkpoint)
+        self.model.load_state_dict(checkpoint.get("model_state_dict", checkpoint))
         self.model.to(self.device)
         self.model.eval()
 
-        from ai_engine.preprocessing.pipeline import PreprocessingPipeline
+        from aiengine.preprocessing.pipeline import PreprocessingPipeline
+
         self.preprocessor = PreprocessingPipeline(device=self.device)
 
-    def predict(self, image) -> dict:
-        from PIL import Image
+    def predict(self, image: Image.Image) -> dict:
         if not isinstance(image, Image.Image):
             image = Image.fromarray(image).convert("RGB")
         tensor = self.preprocessor.process(image)
@@ -84,11 +92,13 @@ class ContaminationRiskInference:
             score = round(probs[i].item(), 4)
             risk_scores[category] = score
             if score > self.threshold:
-                detected_risks.append({
-                    "category": category,
-                    "confidence": score,
-                    "severity": "high" if score > 0.7 else "medium" if score > 0.5 else "low",
-                })
+                detected_risks.append(
+                    {
+                        "category": category,
+                        "confidence": score,
+                        "severity": "high" if score > 0.7 else "medium" if score > 0.5 else "low",
+                    }
+                )
             max_score = max(max_score, score)
 
         if max_score > 0.7:

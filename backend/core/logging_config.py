@@ -1,11 +1,13 @@
 import logging
-from pythonjsonlogger.jsonlogger import JsonFormatter
 import sys
 
-def setup_logging():
+from pythonjsonlogger.jsonlogger import JsonFormatter
+
+
+def setup_logging() -> None:
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
-    
+
     # Suppress noisy libs
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
     logging.getLogger("uvicorn.error").setLevel(logging.WARNING)
@@ -21,9 +23,9 @@ def setup_logging():
         }
     )
     handler.setFormatter(formatter)
-    
+
     if not logger.handlers:
         logger.addHandler(handler)
 
-def get_logger(name: str):
+def get_logger(name: str) -> logging.Logger:
     return logging.getLogger(name)

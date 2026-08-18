@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from backend.core.dependencies import get_admin_user, get_inspection_repo, get_user_repo
 from backend.domain.models import UserModel
-from backend.domain.schemas import UserResponse, InspectionResponse
-from backend.core.dependencies import get_admin_user, get_user_repo, get_inspection_repo
-from backend.infrastructure.repositories import UserRepository, InspectionRepository
+from backend.domain.schemas import InspectionResponse, UserResponse
 from backend.infrastructure.database import check_db_health
+from backend.infrastructure.repositories import InspectionRepository, UserRepository
 from backend.services.monitoring import metrics
 from backend.services.retraining import retraining_pipeline
 
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 async def list_users(
     admin: UserModel = Depends(get_admin_user),
     user_repo: UserRepository = Depends(get_user_repo),
-):
+) -> list[UserResponse]:
     users = await user_repo.list_all()
     return users
 
@@ -25,7 +25,7 @@ async def list_users(
 async def list_all_inspections(
     admin: UserModel = Depends(get_admin_user),
     inspection_repo: InspectionRepository = Depends(get_inspection_repo),
-):
+) -> list[InspectionResponse]:
     inspections, _ = await inspection_repo.list_by_user(
         user_id=admin.id, page=1, limit=100
     )
@@ -33,7 +33,7 @@ async def list_all_inspections(
 
 
 @router.get("/health")
-async def system_health():
+async def system_health() -> dict:
     db_healthy = await check_db_health()
     return {
         "status": "healthy" if db_healthy else "degraded",
@@ -43,7 +43,7 @@ async def system_health():
 
 
 @router.get("/metrics")
-async def get_metrics(admin: UserModel = Depends(get_admin_user)):
+async def get_metrics(admin: UserModel = Depends(get_admin_user)) -> dict:
     return metrics.get_stats()
 
 
@@ -55,7 +55,7 @@ class RetrainRequest(BaseModel):
 async def trigger_retrain(
     request: RetrainRequest,
     admin: UserModel = Depends(get_admin_user)
-):
+) -> dict:
     job = retraining_pipeline.trigger_retraining(request.reason)
     return {"job_id": job.job_id, "status": job.status}
 
@@ -64,7 +64,7 @@ async def trigger_retrain(
 async def get_retrain_status(
     job_id: str,
     admin: UserModel = Depends(get_admin_user)
-):
+) -> dict:
     job = retraining_pipeline.get_job_status(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")

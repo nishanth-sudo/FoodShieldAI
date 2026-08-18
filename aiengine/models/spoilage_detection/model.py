@@ -4,7 +4,7 @@ from torchvision import models
 
 
 class SpoilageDetector(nn.Module):
-    def __init__(self, backbone: str = "resnet34"):
+    def __init__(self, backbone: str = "resnet34") -> None:
         super().__init__()
         if backbone == "resnet34":
             self.backbone = models.resnet34(weights=models.ResNet34_Weights.IMAGENET1K_V1)

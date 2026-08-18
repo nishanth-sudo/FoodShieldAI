@@ -39,7 +39,9 @@ class TrainingPipeline:
             target = dataset_path or f"{self.data_dir}/Freshness44"
             result = subprocess.run(
                 [sys.executable, "-m", "dvc", "pull", target],
-                capture_output=True, text=True, timeout=300,
+                capture_output=True,
+                text=True,
+                timeout=300,
             )
             if result.returncode != 0:
                 logger.warning(f"DVC pull failed: {result.stderr}")

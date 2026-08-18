@@ -1,5 +1,5 @@
-from ai_engine.training.config import DEFAULT_CONFIGS, AugmentationConfig, TrainingConfig
-from ai_engine.training.dataset import (
+from aiengine.training.config import DEFAULT_CONFIGS, AugmentationConfig, TrainingConfig
+from aiengine.training.dataset import (
     ClassificationDataset,
     ContaminationDataset,
     FoodDataset,
@@ -7,7 +7,7 @@ from ai_engine.training.dataset import (
     SpoilageDataset,
     create_datasets,
 )
-from ai_engine.training.trainer import ModelTrainer
+from aiengine.training.trainer import ModelTrainer
 
 __all__ = [
     "ModelTrainer",

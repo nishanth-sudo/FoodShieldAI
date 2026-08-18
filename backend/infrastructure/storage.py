@@ -1,16 +1,16 @@
 import io
-from typing import Optional
+
 from minio import Minio
 
 from backend.config import settings
 
 
 class ObjectStorage:
-    def __init__(self):
+    def __init__(self) -> None:
         self._client = None
 
     @property
-    def client(self):
+    def client(self) -> Minio:
         if self._client is None:
             self._client = Minio(
                 endpoint=settings.storage_endpoint.replace("http://", ""),
@@ -21,7 +21,7 @@ class ObjectStorage:
             self._ensure_bucket()
         return self._client
 
-    def _ensure_bucket(self):
+    def _ensure_bucket(self) -> None:
         if not self.client.bucket_exists(settings.storage_bucket):
             self.client.make_bucket(settings.storage_bucket)
 
@@ -36,14 +36,14 @@ class ObjectStorage:
         )
         return f"{settings.storage_endpoint}/{settings.storage_bucket}/{key}"
 
-    async def get_image(self, key: str) -> Optional[bytes]:
+    async def get_image(self, key: str) -> bytes | None:
         try:
             response = self.client.get_object(settings.storage_bucket, key)
             return response.read()
         except Exception:
             return None
 
-    async def delete_image(self, key: str):
+    async def delete_image(self, key: str) -> None:
         self.client.remove_object(settings.storage_bucket, key)
 
     def generate_presigned_url(self, key: str, expires: int = 3600) -> str:

@@ -1,12 +1,12 @@
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.infrastructure.database import get_session
-from backend.infrastructure.repositories import UserRepository, InspectionRepository
-from backend.infrastructure.cache import cache
 from backend.core.security import decode_token
 from backend.domain.models import UserModel
+from backend.infrastructure.cache import cache
+from backend.infrastructure.database import get_session
+from backend.infrastructure.repositories import InspectionRepository, UserRepository
 
 bearer_scheme = HTTPBearer()
 

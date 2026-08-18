@@ -9,7 +9,7 @@ class FoodClassifier(nn.Module):
         num_classes: int = 100,
         backbone: str = "efficientnet_b0",
         dropout: float = 0.3,
-    ):
+    ) -> None:
         super().__init__()
         self.backbone_name = backbone
         weights = models.EfficientNet_B0_Weights.IMAGENET1K_V1
@@ -19,7 +19,9 @@ class FoodClassifier(nn.Module):
             in_features = self.backbone.classifier[1].in_features
             self.backbone.classifier = nn.Identity()
         elif backbone == "efficientnet_b3":
-            self.backbone = models.efficientnet_b3(weights=models.EfficientNet_B3_Weights.IMAGENET1K_V1)
+            self.backbone = models.efficientnet_b3(
+                weights=models.EfficientNet_B3_Weights.IMAGENET1K_V1
+            )
             in_features = self.backbone.classifier[1].in_features
             self.backbone.classifier = nn.Identity()
         elif backbone == "resnet50":
