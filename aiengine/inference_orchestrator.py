@@ -11,16 +11,53 @@ from aiengine.models.shelf_life_prediction.model import ShelfLifeInference
 from aiengine.models.spoilage_detection.inference import SpoilageDetectionInference
 from aiengine.ocr.extractor import LabelTextExtractor
 from aiengine.preprocessing.pipeline import PreprocessingPipeline
+from aiengine.vlm_augmentor import VisionLLMAugmentor
 from aiengine.xai.explainer import XAIExplainer
 
 logger = logging.getLogger(__name__)
 
 
 class AIInferenceOrchestrator:
+    """
+    End-to-end food inspection pipeline orchestrator.
+
+    Wires together all AI/ML components:
+      - CV models  : food classification, spoilage, defect, contamination, shelf-life
+      - OCR        : label text extraction (PaddleOCR / EasyOCR / Tesseract)
+      - XAI        : Grad-CAM heatmap + Ollama-powered natural-language explanation
+      - VLM        : Ollama vision model cross-validation (optional)
+      - LLM report : Ollama / OpenAI / HuggingFace inspection report generation
+
+    Config keys (all optional):
+    ┌─────────────────────────────┬──────────────────────────────────────────────────────┐
+    │ Key                         │ Description / Default                                │
+    ├─────────────────────────────┼──────────────────────────────────────────────────────┤
+    │ device                      │ "cpu" or "cuda"                 (default: "cpu")     │
+    │ models_dir                  │ Directory containing .pt files  (default: "")        │
+    │ ocr_backend                 │ "paddleocr" | "easyocr" |                            │
+    │                             │ "tesseract" | "mock"            (default: "mock")    │
+    │ xai_method                  │ "gradcam" | "lime" | "shap"     (default: "gradcam") │
+    │ llm_model                   │ LLM backend + model name                             │
+    │                             │   "ollama/llama3.1:8b"  ← default (recommended)     │
+    │                             │   "gpt-4"               ← OpenAI                    │
+    │                             │   "hf/<model>"          ← HuggingFace               │
+    │                             │   "local/template"      ← offline template           │
+    │ llm_temperature             │ LLM sampling temperature        (default: 0.3)       │
+    │ ollama_xai_model            │ Ollama model for XAI text       (default: llama3.2:3b)│
+    │ ollama_ocr_model            │ Ollama model for OCR fallback   (default: llama3.2:3b)│
+    │ vlm_enabled                 │ Enable VLM cross-validation     (default: False)     │
+    │ vlm_model                   │ Ollama vision model             (default: llava:7b)  │
+    └─────────────────────────────┴──────────────────────────────────────────────────────┘
+    """
+
     def __init__(self, config: dict | None = None) -> None:
         self.config = config or {}
         self.executor = ThreadPoolExecutor(max_workers=4)
         self._init_models()
+
+    # ------------------------------------------------------------------
+    # Initialisation
+    # ------------------------------------------------------------------
 
     def _init_models(self) -> None:
         device = self.config.get("device", "cpu")
@@ -54,20 +91,47 @@ class AIInferenceOrchestrator:
             model_path=self.config.get("shelf_life_model", f"{models_dir}/shelf_life.pt"),
             device=device,
         )
+
+        # OCR — with Ollama fallback parsing
         self.ocr_extractor = LabelTextExtractor(
             backend=self.config.get("ocr_backend", "mock"),
+            ollama_model=self.config.get("ollama_ocr_model", "llama3.2:3b"),
         )
+
+        # XAI — with Ollama explanation generation
         self.xai_explainer = XAIExplainer(
             method=self.config.get("xai_method", "gradcam"),
+            ollama_model=self.config.get("ollama_xai_model", "llama3.2:3b"),
         )
+
+        # LLM report — Ollama by default
         self.report_generator = LLMReportGenerator(
-            model_name=self.config.get("llm_model", "gpt-4"),
+            model_name=self.config.get("llm_model", "ollama/llama3.1:8b"),
             temperature=self.config.get("llm_temperature", 0.3),
         )
 
-    def run_full_inspection(self, image: Image.Image) -> dict:
-        quality = self.preprocessor.check_quality(image)
+        # VLM augmentor — opt-in (disabled by default; requires vision model pull)
+        self.vlm_augmentor = VisionLLMAugmentor(
+            model=self.config.get("vlm_model", "llava:7b"),
+            enabled=self.config.get("vlm_enabled", False),
+        )
 
+    # ------------------------------------------------------------------
+    # Inspection pipelines
+    # ------------------------------------------------------------------
+
+    def run_full_inspection(self, image: Image.Image) -> dict:
+        """
+        Run the complete multi-model inspection pipeline.
+
+        Steps:
+        1. Image quality check & label region detection
+        2. Parallel CV inference (food class, spoilage, defects, contamination, shelf-life, OCR)
+        3. XAI explanation generation (Grad-CAM + Ollama text)
+        4. Optional VLM cross-validation (llava / minicpm-v)
+        5. LLM report generation (Ollama / OpenAI / template)
+        """
+        quality = self.preprocessor.check_quality(image)
         label_region = self.preprocessor.detect_label_region(image)
 
         with ThreadPoolExecutor(max_workers=5) as pool:
@@ -89,7 +153,7 @@ class AIInferenceOrchestrator:
 
         xai_result = self.xai_explainer.generate_explanation(food_result | spoilage_result)
 
-        aggregated = {
+        aggregated: dict = {
             "food_type": food_result["food_type"],
             "freshness_score": spoilage_result["freshness_score"],
             "spoilage": spoilage_result,
@@ -107,11 +171,22 @@ class AIInferenceOrchestrator:
             "image_quality": quality,
         }
 
+        # Optional VLM cross-validation (adds "vlm_augmentation" key)
+        if self.vlm_augmentor.is_available:
+            aggregated = self.vlm_augmentor.enrich_results(aggregated, image)
+        else:
+            aggregated["vlm_augmentation"] = {"enabled": False, "reason": "VLM not configured"}
+
+        # LLM report
         aggregated["report"] = self.report_generator.generate_report(aggregated)
 
         return aggregated
 
     def run_fast_inspection(self, image: Image.Image) -> dict:
+        """
+        Lightweight inspection — food classification + spoilage only.
+        No VLM, no LLM report, no OCR.
+        """
         quality = self.preprocessor.check_quality(image)
         food_result = self.food_classifier.predict(image, top_k=3)
         spoilage_result = self.spoilage_detector.predict(image)

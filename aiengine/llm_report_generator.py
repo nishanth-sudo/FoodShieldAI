@@ -3,6 +3,8 @@ import json
 import logging
 from datetime import datetime
 
+from aiengine.ollama_client import OllamaClient
+
 logger = logging.getLogger(__name__)
 
 REPORT_TEMPLATE = """You are a food safety inspection expert. Generate a comprehensive inspection report in JSON format based on the following AI analysis results.
@@ -49,59 +51,171 @@ SUMMARY_TEMPLATE = """Summarize the following food inspection report in 2-3 sent
 
 Summary:"""
 
+SYSTEM_PROMPT = (
+    "You are a food safety inspection expert AI. "
+    "Always respond with valid JSON only — no markdown, no explanation outside the JSON block."
+)
+
+# ---------------------------------------------------------------------------
+# Provider prefixes
+# ---------------------------------------------------------------------------
+
+_PROVIDER_OLLAMA = "ollama"
+_PROVIDER_GPT = "gpt"
+_PROVIDER_HF = "hf"
+_PROVIDER_LOCAL = "local/"
+
 
 class LLMReportGenerator:
-    def __init__(self, model_name: str = "gpt-4", temperature: float = 0.3) -> None:
+    """
+    Generates food inspection reports using an LLM backend.
+
+    Supported backends (selected via ``model_name`` prefix):
+    - ``ollama/<model>``  — Local Ollama server (recommended, free, private)
+    - ``gpt-*``           — OpenAI GPT models (requires OPENAI_API_KEY)
+    - ``hf/*``            — HuggingFace Inference API
+    - ``local/*``         — Template-based fallback (no LLM)
+
+    Examples::
+
+        # Ollama (recommended)
+        gen = LLMReportGenerator(model_name="ollama/llama3.1:8b")
+
+        # OpenAI
+        gen = LLMReportGenerator(model_name="gpt-4")
+
+        # Offline template fallback
+        gen = LLMReportGenerator(model_name="local/template")
+    """
+
+    def __init__(self, model_name: str = "ollama/llama3.1:8b", temperature: float = 0.3) -> None:
         self.model_name = model_name
         self.temperature = temperature
         self._client = None
-        self._is_using_local = model_name.startswith("local/")
+        self._provider: str = self._detect_provider(model_name)
 
-        if not self._is_using_local:
-            self._init_remote_client()
+        if self._provider == _PROVIDER_OLLAMA:
+            self._init_ollama_client()
+        elif self._provider == _PROVIDER_GPT:
+            self._init_openai_client()
+        elif self._provider == _PROVIDER_HF:
+            self._init_huggingface_client()
+        # "local" → no client needed; _template_report() is used directly
 
-    def _init_remote_client(self) -> None:
-        if self.model_name.startswith("gpt"):
-            try:
-                from openai import OpenAI
-
-                self._client = OpenAI()
-            except ImportError:
-                logger.warning("openai not installed. Install with: pip install openai")
-                self._client = None
-        elif self.model_name.startswith("hf") or self.model_name.startswith("local/"):
-            try:
-                from huggingface_hub import InferenceClient
-
-                self._client = InferenceClient()
-            except ImportError:
-                logger.warning(
-                    "huggingface-hub not installed. Install with: pip install huggingface-hub"
-                )
-                self._client = None
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
 
     def generate_report(self, inspection_results: dict) -> dict:
-        if self._client is None or self._is_using_local:
-            return self._template_report(inspection_results)
-
+        """Generate a structured JSON inspection report from CV model results."""
         prompt = self._build_prompt(inspection_results)
         try:
-            response = self._call_llm(prompt)
-            return self._parse_response(response, inspection_results)
-        except Exception as e:
-            logger.error(f"LLM report generation failed: {e}")
-            return self._template_report(inspection_results)
+            if self._provider == _PROVIDER_OLLAMA and self._client is not None:
+                result = self._client.chat_json(prompt, system=SYSTEM_PROMPT)
+                if result:
+                    result.setdefault("inspection_date", datetime.now().isoformat())
+                    return result
+                logger.warning("Ollama returned empty/invalid JSON — falling back to template")
+
+            elif self._provider == _PROVIDER_GPT and self._client is not None:
+                raw = self._call_openai(prompt)
+                return self._parse_response(raw, inspection_results)
+
+            elif self._provider == _PROVIDER_HF and self._client is not None:
+                raw = self._call_huggingface(prompt)
+                return self._parse_response(raw, inspection_results)
+
+        except Exception as exc:
+            logger.error("LLM report generation failed (%s): %s", self._provider, exc)
+
+        return self._template_report(inspection_results)
 
     def generate_summary(self, report: str) -> str:
-        if self._client is None or self._is_using_local:
-            return self._extract_summary(report)
-
+        """Summarise a report in 2-3 sentences."""
         prompt = SUMMARY_TEMPLATE.format(report_text=report)
         try:
-            response = self._call_llm(prompt)
-            return response.strip()
+            if self._provider == _PROVIDER_OLLAMA and self._client is not None:
+                summary = self._client.chat(prompt)
+                if summary:
+                    return summary.strip()
+
+            elif self._provider == _PROVIDER_GPT and self._client is not None:
+                return self._call_openai(prompt).strip()
+
+            elif self._provider == _PROVIDER_HF and self._client is not None:
+                return self._call_huggingface(prompt).strip()
+
         except Exception:
-            return self._extract_summary(report)
+            pass
+
+        return self._extract_summary(report)
+
+    # ------------------------------------------------------------------
+    # Provider initialisation
+    # ------------------------------------------------------------------
+
+    def _init_ollama_client(self) -> None:
+        bare_model = self.model_name.replace("ollama/", "", 1)
+        self._client = OllamaClient(
+            model=bare_model,
+            temperature=self.temperature,
+            max_tokens=2000,
+        )
+        if not self._client.is_available:
+            logger.warning(
+                "Ollama server not reachable at %s. "
+                "Start Ollama with `ollama serve` and pull the model with "
+                "`ollama pull %s`. Falling back to template reports.",
+                self._client.base_url,
+                bare_model,
+            )
+            self._client = None
+
+    def _init_openai_client(self) -> None:
+        try:
+            from openai import OpenAI
+
+            self._client = OpenAI()
+        except ImportError:
+            logger.warning("openai not installed. Install with: pip install openai")
+            self._client = None
+
+    def _init_huggingface_client(self) -> None:
+        try:
+            from huggingface_hub import InferenceClient
+
+            self._client = InferenceClient()
+        except ImportError:
+            logger.warning(
+                "huggingface-hub not installed. Install with: pip install huggingface-hub"
+            )
+            self._client = None
+
+    # ------------------------------------------------------------------
+    # LLM call helpers
+    # ------------------------------------------------------------------
+
+    def _call_openai(self, prompt: str) -> str:
+        response = self._client.chat.completions.create(
+            model=self.model_name,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=self.temperature,
+            max_tokens=2000,
+        )
+        return response.choices[0].message.content or ""
+
+    def _call_huggingface(self, prompt: str) -> str:
+        response = self._client.text_generation(
+            prompt,
+            model=self.model_name.replace("hf/", ""),
+            temperature=self.temperature,
+            max_new_tokens=2000,
+        )
+        return response
+
+    # ------------------------------------------------------------------
+    # Prompt building
+    # ------------------------------------------------------------------
 
     def _build_prompt(self, results: dict) -> str:
         spoilage = results.get("spoilage", {})
@@ -150,23 +264,9 @@ class LLMReportGenerator:
             else str(ocr),
         )
 
-    def _call_llm(self, prompt: str) -> str:
-        if self.model_name.startswith("gpt"):
-            response = self._client.chat.completions.create(
-                model=self.model_name,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=self.temperature,
-                max_tokens=2000,
-            )
-            return response.choices[0].message.content
-        else:
-            response = self._client.text_generation(
-                prompt,
-                model=self.model_name.replace("hf/", ""),
-                temperature=self.temperature,
-                max_new_tokens=2000,
-            )
-            return response
+    # ------------------------------------------------------------------
+    # Response parsing / template fallback
+    # ------------------------------------------------------------------
 
     def _parse_response(self, response: str, fallback: dict) -> dict:
         try:
@@ -205,7 +305,7 @@ class LLMReportGenerator:
             recommendations.append("Discard the item immediately due to spoilage")
         if isinstance(defects, list) and defects:
             recommendations.append("Inspect packaging integrity — consider repackaging")
-        if freshness < 0.5 and freshness > 0.3:
+        if 0.3 < freshness < 0.5:
             recommendations.append("Consume within 24 hours")
         recommendations.append("Store at recommended temperature")
 
@@ -255,6 +355,16 @@ class LLMReportGenerator:
             "overall_verdict": verdict,
             "inspection_date": datetime.now().isoformat(),
         }
+
+    @staticmethod
+    def _detect_provider(model_name: str) -> str:
+        if model_name.startswith(_PROVIDER_OLLAMA + "/"):
+            return _PROVIDER_OLLAMA
+        if model_name.startswith(_PROVIDER_GPT):
+            return _PROVIDER_GPT
+        if model_name.startswith(_PROVIDER_HF):
+            return _PROVIDER_HF
+        return _PROVIDER_LOCAL  # "local/*" or any unrecognised string → template fallback
 
     @staticmethod
     def _extract_summary(report: str) -> str:

@@ -108,13 +108,13 @@ This file tracks the complete development progress of the FoodShield AI system. 
 
 | # | Task | Status | Completed | Notes |
 |---|------|--------|-----------|-------|
-| 7.1 | Unit tests (backend) | ✅ | 2026-08-13 | 16 new tests — validation, cache, config, rate limiter; 10 test files total |
-| 7.2 | Unit tests (AI engine) | ⏳ | | |
-| 7.3 | Integration tests | ⏳ | | |
-| 7.4 | End-to-end tests | ⏳ | | |
-| 7.5 | Performance/load testing | ⏳ | | |
-| 7.6 | Security audit | ⏳ | | |
-| 7.7 | AI model robustness testing | ⏳ | | |
+| 7.1 | Unit tests (backend) | ✅ | 2026-08-13 | 16 tests — validation, cache, config, rate limiter; 10 test files total |
+| 7.2 | Unit tests (AI engine) | ✅ | 2026-08-25 | `tests/unit/test_aiengine.py` (38 tests) — Preprocessing, OCR, XAI, ReportGen, OllamaClient |
+| 7.3 | Integration tests | ✅ | 2026-08-25 | `tests/integration/test_api_integration.py` (9 tests) — Auth, inspections, health endpoints |
+| 7.4 | End-to-end tests | ✅ | 2026-08-25 | `tests/e2e/test_inspection_flow.py` (2 journeys) — Full lifecycle register/login/upload/view + security guard |
+| 7.5 | Performance/load testing | ✅ | 2026-08-25 | `tests/unit/test_performance.py` (12 tests) — Preprocessing, OCR, report gen, concurrency, memory profiling |
+| 7.6 | Security audit | ✅ | 2026-08-25 | `tests/unit/test_security_audit.py` (23 tests) — JWT tampering/expiry, bcrypt strength, input validation, rate limiting, risk coverage |
+| 7.7 | AI model robustness testing | ✅ | 2026-08-25 | `tests/unit/test_model_robustness.py` (23 tests) — Corrupted inputs, aspect ratios, unsupported backbones, boundary values, error degradation |
 
 ## Phase 8: Documentation
 
@@ -155,6 +155,21 @@ This file tracks the complete development progress of the FoodShield AI system. 
 
 ---
 
+## Phase 11: Ollama Integration (Aug 2026)
+
+| # | Task | Status | Completed | Notes |
+|---|------|--------|-----------|-------|
+| 11.1 | Create `OllamaClient` wrapper | ✅ | 2026-08-25 | OpenAI-compat transport, text + vision + JSON modes, health-check |
+| 11.2 | Replace OpenAI GPT-4 with Ollama in `LLMReportGenerator` | ✅ | 2026-08-25 | `ollama/llama3.1:8b` default; GPT-4 & HF kept as alternatives |
+| 11.3 | Add Ollama fallback parsing to `LabelTextExtractor` (OCR) | ✅ | 2026-08-25 | `llama3.2:3b` invoked when regex yields < 2 fields |
+| 11.4 | Replace template strings in `XAIExplainer` with Ollama explanations | ✅ | 2026-08-25 | `llama3.2:3b`; graceful template fallback |
+| 11.5 | Create `VisionLLMAugmentor` (VLM cross-validation layer) | ✅ | 2026-08-25 | `llava:7b` default; opt-in via `vlm_enabled=true` |
+| 11.6 | Update `AIInferenceOrchestrator` to wire all Ollama components | ✅ | 2026-08-25 | Full config table; VLM opt-in; backward-compatible |
+| 11.7 | Update `.env.example` with all Ollama env vars | ✅ | 2026-08-25 | `OLLAMA_BASE_URL`, `OLLAMA_ENABLED`, `FOODSHIELD_LLM_MODEL`, VLM vars |
+| 11.8 | Update `aiengine/requirements.txt` with `httpx` | ✅ | 2026-08-25 | Needed for Ollama health-check endpoint |
+
+---
+
 ## Summary
 
 | Phase | Total Tasks | Completed | In Progress | Pending |
@@ -165,8 +180,9 @@ This file tracks the complete development progress of the FoodShield AI system. 
 | 4. Frontend | 10 | 10 | 0 | 0 |
 | 5. MLOps | 7 | 7 | 0 | 0 |
 | 6. Infrastructure & DevOps | 8 | 6 | 0 | 2 |
-| 7. Testing & QA | 7 | 1 | 0 | 6 |
+| 7. Testing & QA | 7 | 7 | 0 | 0 |
 | 8. Documentation | 5 | 0 | 1 | 4 |
 | 9. Future Enhancements | 6 | 0 | 0 | 6 |
 | 10. Hardening & Code Quality | 9 | 9 | 0 | 0 |
-| **Total** | **82** | **63** | **1** | **18** |
+| 11. Ollama Integration | 8 | 8 | 0 | 0 |
+| **Total** | **90** | **77** | **1** | **12** |

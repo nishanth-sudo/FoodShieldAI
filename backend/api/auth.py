@@ -9,7 +9,13 @@ from backend.core.security import (
 )
 from backend.domain.entities import UserRole
 from backend.domain.models import UserModel
-from backend.domain.schemas import LoginRequest, TokenResponse, UserCreate, UserResponse
+from backend.domain.schemas import (
+    LoginRequest,
+    RefreshRequest,
+    TokenResponse,
+    UserCreate,
+    UserResponse,
+)
 from backend.infrastructure.repositories import UserRepository
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
@@ -60,12 +66,12 @@ async def login(
 
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh(
-    refresh_token: str,
+    body: RefreshRequest,
     user_repo: UserRepository = Depends(get_user_repo),
 ) -> TokenResponse:
     from backend.core.security import decode_token
 
-    payload = decode_token(refresh_token)
+    payload = decode_token(body.refresh_token)
     if payload is None or payload.get("type") != "refresh":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

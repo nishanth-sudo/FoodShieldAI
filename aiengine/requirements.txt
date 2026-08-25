@@ -4,11 +4,18 @@ opencv-python-headless>=4.8.0
 numpy>=1.24.0
 Pillow>=10.0.0
 ultralytics>=8.0.0
+# LLM / Report generation
+# Ollama uses the openai client as its HTTP transport (OpenAI-compatible API)
 openai>=1.0.0
+# Optional: HuggingFace Inference API (alternative to Ollama)
 huggingface-hub>=0.20.0
+# Optional: httpx is used by OllamaClient.is_available / list_local_models
+httpx>=0.25.0
+# OCR backends (install the one you use)
 paddleocr>=2.7.0
 easyocr>=1.7.0
 pytesseract>=0.3.10
+# MLOps
 mlflow>=2.10.0
 psutil>=5.9.0
 dvc>=3.0.0

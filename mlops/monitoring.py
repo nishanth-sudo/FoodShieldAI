@@ -7,7 +7,6 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-
 class PredictionLogger:
     def __init__(self, log_dir: str = "mlops/monitoring/logs", max_records: int = 10000) -> None:
         self.log_dir = Path(log_dir)
@@ -239,3 +238,4 @@ class ModelMonitor:
             + np.log(np.sqrt((var_ref + var_cur + mean_diff**2) / (2 * var_cur)))
         )
         return float(min(js, 1.0))
+

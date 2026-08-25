@@ -24,7 +24,15 @@ class Settings(BaseSettings):
 
     ai_engine_url: str = "http://ai-engine:8501"
     max_upload_size_mb: int = 10
-    allowed_image_types: list[str] = ["image/jpeg", "image/png", "image/webp"]
+    allowed_image_types: list[str] = [
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/webp",
+        "image/pjpeg",
+        "image/x-png",
+        "image/jfif",
+    ]
 
     rate_limit_enabled: bool = True
     rate_limit_requests_per_minute: int = 60

@@ -32,6 +32,10 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
+
 class InspectionResponse(BaseModel):
     id: str
     status: InspectionStatus

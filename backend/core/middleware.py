@@ -70,9 +70,9 @@ def validate_image_bytes(data: bytes, filename: str = "image.jpg") -> str:
     if not sanitized:
         sanitized = 'image' + ext
 
-    # 3. Validates extension is in [.jpg, .jpeg, .png, .webp]
+    # 3. Validates extension is in [.jpg, .jpeg, .png, .webp, .jfif]
     _, file_ext = os.path.splitext(sanitized)
-    if file_ext.lower() not in ['.jpg', '.jpeg', '.png', '.webp']:
+    if file_ext.lower() not in ['.jpg', '.jpeg', '.png', '.webp', '.jfif']:
         raise HTTPException(status_code=400, detail="Invalid file extension.")
 
     return sanitized
