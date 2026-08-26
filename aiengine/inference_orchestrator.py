@@ -12,7 +12,9 @@ from aiengine.models.spoilage_detection.inference import SpoilageDetectionInfere
 from aiengine.ocr.extractor import LabelTextExtractor
 from aiengine.preprocessing.pipeline import PreprocessingPipeline
 from aiengine.vlm_augmentor import VisionLLMAugmentor
+from aiengine.xai.counterfactual import CounterfactualExplainer
 from aiengine.xai.explainer import XAIExplainer
+from aiengine.xai.shap_explainer import SHAPExplainer
 
 logger = logging.getLogger(__name__)
 
@@ -32,21 +34,21 @@ class AIInferenceOrchestrator:
     ┌─────────────────────────────┬──────────────────────────────────────────────────────┐
     │ Key                         │ Description / Default                                │
     ├─────────────────────────────┼──────────────────────────────────────────────────────┤
-    │ device                      │ "cpu" or "cuda"                 (default: "cpu")     │
-    │ models_dir                  │ Directory containing .pt files  (default: "")        │
+    │ device                      │ "cpu" or "cuda"                (default: "cpu")      │
+    │ models_dir                  │ Directory containing .pt files (default: "")         │
     │ ocr_backend                 │ "paddleocr" | "easyocr" |                            │
-    │                             │ "tesseract" | "mock"            (default: "mock")    │
-    │ xai_method                  │ "gradcam" | "lime" | "shap"     (default: "gradcam") │
+    │                             │ "tesseract" | "mock"           (default: "mock")     │
+    │ xai_method                  │ "gradcam" | "lime" | "shap"    (default: "gradcam")  │
     │ llm_model                   │ LLM backend + model name                             │
-    │                             │   "ollama/llama3.1:8b"  ← default (recommended)     │
-    │                             │   "gpt-4"               ← OpenAI                    │
-    │                             │   "hf/<model>"          ← HuggingFace               │
+    │                             │   "ollama/llama3.1:8b"  ← default (recommended)      │
+    │                             │   "gpt-4"               ← OpenAI                     │
+    │                             │   "hf/<model>"          ← HuggingFace                │
     │                             │   "local/template"      ← offline template           │
-    │ llm_temperature             │ LLM sampling temperature        (default: 0.3)       │
-    │ ollama_xai_model            │ Ollama model for XAI text       (default: llama3.2:3b)│
-    │ ollama_ocr_model            │ Ollama model for OCR fallback   (default: llama3.2:3b)│
-    │ vlm_enabled                 │ Enable VLM cross-validation     (default: False)     │
-    │ vlm_model                   │ Ollama vision model             (default: llava:7b)  │
+    │ llm_temperature             │ LLM sampling temperature       (default: 0.3)        │
+    │ ollama_xai_model            │ Ollama model for XAI text      (default: llama3.2:3b)│
+    │ ollama_ocr_model            │ Ollama model for OCR fallback  (default: llama3.2:3b)│
+    │ vlm_enabled                 │ Enable VLM cross-validation    (default: False)      │
+    │ vlm_model                   │ Ollama vision model            (default: llava:7b)   │
     └─────────────────────────────┴──────────────────────────────────────────────────────┘
     """
 
@@ -116,11 +118,27 @@ class AIInferenceOrchestrator:
             enabled=self.config.get("vlm_enabled", False),
         )
 
+        # SHAP explainer — for tabular / shelf-life model explanations
+        self._shap_feature_names = [
+            "temperature", "humidity", "storage_duration", "packaging_type", "food_type",
+        ]
+        self.shap_explainer: SHAPExplainer | None = None  # lazily initialised
+
+        # Counterfactual explainer — "what would need to change?"
+        self._cf_feature_constraints = {
+            "temperature": (0.0, 45.0),
+            "humidity": (0.0, 100.0),
+            "storage_duration": (0.0, 30.0),
+        }
+        self.counterfactual_explainer: CounterfactualExplainer | None = None  # lazily initialised
+
     # ------------------------------------------------------------------
     # Inspection pipelines
     # ------------------------------------------------------------------
 
-    def run_full_inspection(self, image: Image.Image) -> dict:
+    def run_full_inspection(
+        self, image: Image.Image, environmental_data: dict | None = None,
+    ) -> dict:
         """
         Run the complete multi-model inspection pipeline.
 
@@ -128,8 +146,9 @@ class AIInferenceOrchestrator:
         1. Image quality check & label region detection
         2. Parallel CV inference (food class, spoilage, defects, contamination, shelf-life, OCR)
         3. XAI explanation generation (Grad-CAM + Ollama text)
-        4. Optional VLM cross-validation (llava / minicpm-v)
-        5. LLM report generation (Ollama / OpenAI / template)
+        4. SHAP + Counterfactual XAI (when environmental_data provided)
+        5. Optional VLM cross-validation (llava / minicpm-v)
+        6. LLM report generation (Ollama / OpenAI / template)
         """
         quality = self.preprocessor.check_quality(image)
         label_region = self.preprocessor.detect_label_region(image)
@@ -171,6 +190,22 @@ class AIInferenceOrchestrator:
             "image_quality": quality,
         }
 
+        # ── XAI: SHAP + Counterfactual (when environmental context provided) ──
+        xai_evidence = {}
+        if environmental_data:
+            shap_result = self._compute_shap(environmental_data, spoilage_result)
+            if shap_result:
+                xai_evidence["shap"] = shap_result
+
+            cf_result = self._compute_counterfactuals(
+                environmental_data, spoilage_result,
+            )
+            if cf_result:
+                xai_evidence["counterfactuals"] = cf_result
+
+        if xai_evidence:
+            aggregated["xai"] = xai_evidence
+
         # Optional VLM cross-validation (adds "vlm_augmentation" key)
         if self.vlm_augmentor.is_available:
             aggregated = self.vlm_augmentor.enrich_results(aggregated, image)
@@ -197,3 +232,194 @@ class AIInferenceOrchestrator:
             "food_classification": food_result,
             "image_quality": quality,
         }
+
+    def run_explanation(
+        self, image: Image.Image, environmental_data: dict | None = None,
+    ) -> dict:
+        """
+        Run the XAI explanation pipeline.
+
+        Pipeline: Image → CV Models → Grad-CAM → SHAP → Counterfactuals → LLM Explanation
+
+        Steps:
+        1. Run food classification + spoilage detection
+        2. Generate Grad-CAM heatmap
+        3. If environmental_data provided, compute SHAP values and counterfactuals
+        4. Generate natural-language explanation via LLM
+        5. Return structured XAI results
+        """
+        food_result = self.food_classifier.predict(image, top_k=3)
+        spoilage_result = self.spoilage_detector.predict(image)
+
+        # Grad-CAM heatmap
+        tensor = self.preprocessor.process(image)
+        gradcam_result = self.xai_explainer.generate_heatmap(
+            self.food_classifier.model, tensor,
+        )
+
+        # Natural-language explanation
+        explanation = self.xai_explainer.generate_explanation(
+            food_result | spoilage_result,
+        )
+
+        # Determine risk level
+        spoilage_score = spoilage_result.get("spoilage_score", 0)
+        if spoilage_score >= 0.7:
+            risk_level = "HIGH"
+        elif spoilage_score >= 0.4:
+            risk_level = "MEDIUM"
+        else:
+            risk_level = "LOW"
+
+        result: dict = {
+            "gradcam": gradcam_result,
+            "explanation": explanation,
+            "risk_level": risk_level,
+        }
+
+        # SHAP + Counterfactuals (when environmental context provided)
+        if environmental_data:
+            shap_result = self._compute_shap(environmental_data, spoilage_result)
+            if shap_result:
+                result["shap_values"] = shap_result
+
+                # Build risk factors table from SHAP values
+                risk_factors = []
+                for feat, val in shap_result.get("feature_importance", []):
+                    contribution_pct = abs(val) * 100
+                    risk_factors.append({
+                        "factor": feat,
+                        "contribution": round(contribution_pct, 1),
+                        "direction": "increases risk" if val > 0 else "decreases risk",
+                    })
+                result["risk_factors"] = risk_factors
+
+            cf_result = self._compute_counterfactuals(
+                environmental_data, spoilage_result,
+            )
+            if cf_result:
+                result["counterfactuals"] = cf_result
+
+        return result
+
+    def generate_report_from_evidence(self, evidence: dict) -> dict:
+        """
+        Generate an LLM inspection report from pre-computed structured evidence.
+
+        This allows the /report endpoint to accept pre-computed CV + XAI results
+        and produce a grounded LLM explanation without re-running inference.
+        """
+        # Build a synthetic inspection result from the evidence
+        synthetic: dict = {
+            "food_type": evidence.get("food_type", "Unknown"),
+            "freshness_score": 1.0 - evidence.get("spoilage_probability", 0.5),
+            "spoilage": {
+                "is_spoiled": evidence.get("spoilage_probability", 0.5) > 0.5,
+                "spoilage_score": evidence.get("spoilage_probability", 0.5),
+                "freshness_score": 1.0 - evidence.get("spoilage_probability", 0.5),
+                "severity_label": "high" if evidence.get("spoilage_probability", 0.5) > 0.7 else "medium",
+            },
+            "shelf_life": {
+                "estimated_days_remaining": evidence.get("shelf_life_days", "N/A"),
+                "freshness_category": "short" if evidence.get("shelf_life_days", 7) and evidence.get("shelf_life_days", 7) < 3 else "moderate",
+                "confidence": 0.85,
+            },
+            "contamination_risks": {},
+            "packaging_defects": [],
+            "food_classification": {
+                "food_type": evidence.get("food_type", "Unknown"),
+                "confidence_scores": [{"confidence": 0.9}],
+            },
+            "ocr_data": {},
+        }
+
+        # Attach XAI evidence if available
+        if evidence.get("xai_evidence"):
+            synthetic["xai"] = evidence["xai_evidence"]
+        if evidence.get("counterfactuals"):
+            synthetic.setdefault("xai", {})["counterfactuals"] = evidence["counterfactuals"]
+
+        return self.report_generator.generate_report(synthetic)
+
+    # ------------------------------------------------------------------
+    # Private XAI helpers
+    # ------------------------------------------------------------------
+
+    def _compute_shap(
+        self, environmental_data: dict, spoilage_result: dict,
+    ) -> dict | None:
+        """Compute SHAP feature contributions using environmental data."""
+        try:
+            numeric_features = {
+                k: v for k, v in environmental_data.items()
+                if v is not None and isinstance(v, (int, float))
+            }
+            if not numeric_features:
+                return None
+
+            feature_names = list(numeric_features.keys())
+
+            def _risk_predict(feature_dicts: list[dict]) -> list[float]:
+                """Simple risk model based on environmental factors."""
+                results = []
+                for fd in feature_dicts:
+                    base = spoilage_result.get("spoilage_score", 0.5)
+                    temp = fd.get("temperature", 20)
+                    humidity = fd.get("humidity", 50)
+                    duration = fd.get("storage_duration", 0)
+                    # Increase risk with higher temp, humidity, and duration
+                    risk = base + (temp - 20) * 0.01 + (humidity - 50) * 0.005 + duration * 0.02
+                    results.append(max(0.0, min(1.0, risk)))
+                return results
+
+            explainer = SHAPExplainer(
+                feature_names=feature_names,
+                predict_func=_risk_predict,
+            )
+            return explainer.explain(numeric_features)
+
+        except Exception as exc:
+            logger.warning("SHAP computation failed: %s", exc)
+            return None
+
+    def _compute_counterfactuals(
+        self, environmental_data: dict, spoilage_result: dict,
+    ) -> list[dict] | None:
+        """Compute counterfactual scenarios for risk reduction."""
+        try:
+            numeric_features = {
+                k: v for k, v in environmental_data.items()
+                if v is not None and isinstance(v, (int, float))
+            }
+            if not numeric_features:
+                return None
+
+            constraints = {
+                k: v for k, v in self._cf_feature_constraints.items()
+                if k in numeric_features
+            }
+            if not constraints:
+                return None
+
+            def _risk_predict(features: dict) -> float:
+                """Simple risk model based on environmental factors."""
+                base = spoilage_result.get("spoilage_score", 0.5)
+                temp = features.get("temperature", 20)
+                humidity = features.get("humidity", 50)
+                duration = features.get("storage_duration", 0)
+                risk = base + (temp - 20) * 0.01 + (humidity - 50) * 0.005 + duration * 0.02
+                return max(0.0, min(1.0, risk))
+
+            explainer = CounterfactualExplainer(
+                predict_func=_risk_predict,
+                feature_constraints=constraints,
+            )
+            return explainer.generate_counterfactuals(
+                current_features=numeric_features,
+                target_threshold=0.34,  # low risk threshold
+                n_counterfactuals=3,
+            )
+
+        except Exception as exc:
+            logger.warning("Counterfactual computation failed: %s", exc)
+            return None

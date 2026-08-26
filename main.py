@@ -7,6 +7,7 @@ from slowapi.errors import RateLimitExceeded as SlowApiRateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from backend.api.admin import router as admin_router
+from backend.api.ai_routes import router as ai_router
 from backend.api.auth import router as auth_router
 from backend.api.routes import router as inspection_router
 from backend.config import settings
@@ -54,6 +55,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(inspection_router)
 app.include_router(admin_router)
+app.include_router(ai_router)
 
 
 @app.get("/health")

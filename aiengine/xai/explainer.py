@@ -326,3 +326,4 @@ class XAIExplainer:
                 {"x": x, "y": y, "width": w, "height": h, "importance": round(importance, 3)}
             )
         return sorted(regions, key=lambda r: r["importance"], reverse=True)
+    
