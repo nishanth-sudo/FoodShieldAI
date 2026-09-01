@@ -249,7 +249,7 @@ class TestPreprocessingPipeline:
         pipeline = PreprocessingPipeline()
         quality = pipeline.check_quality(black_image)
 
-        assert quality["is_too_dark"] is True
+        assert bool(quality["is_too_dark"]) is True
 
     def test_check_quality_white_image_is_too_bright(self, white_image):
         """check_quality() must flag an all-white image as is_too_bright=True."""
@@ -258,7 +258,7 @@ class TestPreprocessingPipeline:
         pipeline = PreprocessingPipeline()
         quality = pipeline.check_quality(white_image)
 
-        assert quality["is_too_bright"] is True
+        assert bool(quality["is_too_bright"]) is True
 
     def test_check_quality_blur_score_is_float(self, rgb_image):
         """check_quality() blur_score must be a numeric value."""
@@ -475,10 +475,10 @@ class TestXAIExplainer:
             XAIExplainer(method="invalid_method", ollama_model=None)
 
     def test_valid_methods_do_not_raise(self):
-        """gradcam, lime, and shap are all valid XAI methods."""
+        """gradcam and shap are valid XAI methods; lime was removed per spec §3."""
         from aiengine.xai.explainer import XAIExplainer
 
-        for method in ("gradcam", "lime", "shap"):
+        for method in ("gradcam", "shap"):
             explainer = XAIExplainer(method=method, ollama_model=None)
             assert explainer.method == method
 
@@ -582,6 +582,104 @@ class TestXAIExplainer:
         result = explainer.generate_explanation(sample_inspection_results)
 
         assert "apple" in result.lower()
+
+    def test_generate_heatmap_delegates_to_gradcam(self, rgb_image):
+        """generate_heatmap with method='gradcam' must delegate to GradCAMExplainer."""
+        from aiengine.xai.explainer import XAIExplainer
+        import torch
+
+        explainer = XAIExplainer(method="gradcam", ollama_model=None)
+        tensor = torch.randn(1, 3, 224, 224)
+
+        # Mock the model to avoid loading real weights
+        mock_model = MagicMock()
+        # Mock the model's output to be a tensor
+        mock_model.return_value = torch.randn(1, 10)
+        # Mock the model as a torch.nn.Module
+        mock_model.__class__ = torch.nn.Module
+
+        # We need to mock the target layer as well since GradCAM looks for Conv2d
+        mock_layer = MagicMock(spec=torch.nn.Conv2d)
+        mock_model.named_modules.return_value = [("conv1", mock_layer)]
+
+        # Since we are mocking everything, GradCAM's actual logic will fail on tensor ops.
+        # We just check if the call happens.
+        with patch("aiengine.xai.gradcam.GradCAMExplainer.generate_heatmap") as mock_gradcam:
+            mock_gradcam.return_value = {"heatmap_array": [], "method": "gradcam"}
+            result = explainer.generate_heatmap(mock_model, tensor)
+            mock_gradcam.assert_called_once()
+            assert result["method"] == "gradcam"
+
+    def test_generate_heatmap_shap_raises_not_implemented(self, rgb_image):
+        """generate_heatmap with method='shap' should currently raise NotImplementedError."""
+        from aiengine.xai.explainer import XAIExplainer
+        import torch
+
+        explainer = XAIExplainer(method="shap", ollama_model=None)
+        tensor = torch.randn(1, 3, 224, 224)
+        mock_model = MagicMock()
+        mock_model.__class__ = torch.nn.Module
+
+        with pytest.raises(NotImplementedError, match="Genuine Image SHAP is not yet implemented"):
+            explainer.generate_heatmap(mock_model, tensor)
+
+    def test_shap_explainer_additivity(self):
+        """SHAPExplainer must satisfy the additivity property: base + sum(shap) ≈ prediction."""
+        shap = pytest.importorskip("shap", reason="shap library not installed")
+        from aiengine.xai.shap_explainer import SHAPExplainer
+        import numpy as np
+
+        feature_names = ["temp", "hum"]
+        def mock_predict(data):
+            # linear model: 0.5 + 0.1*temp + 0.2*hum
+            return [0.5 + 0.1*d["temp"] + 0.2*d["hum"] for d in data]
+
+        explainer = SHAPExplainer(feature_names=feature_names, predict_func=mock_predict)
+
+        # Mock the shap library if not present to test the interface
+        with patch("shap.KernelExplainer") as mock_kernel:
+            mock_instance = mock_kernel.return_value
+            mock_instance.shap_values.return_value = [np.array([0.1, 0.2])]
+            mock_instance.expected_value = 0.5
+
+            # To make additivity check pass: 0.5 + 0.1 + 0.2 = 0.8
+            # The model_wrapper will be called. We need to make sure it returns 0.8.
+            # The actual mock_predict will do that if we pass temp=1, hum=1.
+            result = explainer.explain({"temp": 1.0, "hum": 1.0})
+
+            assert "is_additive" in result
+            assert result["base_value"] == 0.5
+            assert result["prediction"] == 0.8
+            assert result["is_additive"] is True
+
+    def test_gradcam_explainer_output_shape(self):
+        """GradCAMExplainer must return a heatmap with correct dimensions."""
+        from aiengine.xai.gradcam import GradCAMExplainer
+        import torch
+        import numpy as np
+
+        explainer = GradCAMExplainer()
+        # Create a simple model with a Conv2d layer
+        class SimpleModel(torch.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.conv = torch.nn.Conv2d(3, 8, 3)
+                self.fc = torch.nn.Linear(8 * 222 * 222, 10)
+            def forward(self, x):
+                x = self.conv(x)
+                x = torch.flatten(x, 1)
+                return self.fc(x)
+
+        model = SimpleModel()
+        image = torch.randn(1, 3, 224, 224)
+
+        result = explainer.generate_heatmap(model, image)
+
+        assert "heatmap_array" in result
+        heatmap = np.array(result["heatmap_array"])
+        # GradCAM heatmap is usually the size of the last conv layer or resized.
+        # In GradCAMExplainer, it's the size of the last conv layer (222x222 in this case).
+        assert heatmap.shape == (222, 222)
 
 
 # ===========================================================================

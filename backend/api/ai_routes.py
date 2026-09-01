@@ -10,10 +10,9 @@ Provides direct access to the AI pipeline components:
     /ai/health   — AI engine component health check
 """
 
-from __future__ import annotations
-
 import io
 import logging
+from typing import Optional
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi import status as http_status
@@ -183,10 +182,10 @@ async def predict(
 async def explain(
     request: Request,
     file: UploadFile = File(..., description="Food image to explain"),
-    temperature: float | None = Form(None, description="Storage temperature °C"),
-    humidity: float | None = Form(None, description="Relative humidity %"),
-    storage_duration: float | None = Form(None, description="Storage duration in days"),
-    packaging_type: str | None = Form(None, description="Packaging type"),
+    temperature: float = Form(default=None, description="Storage temperature °C"),
+    humidity: float = Form(default=None, description="Relative humidity %"),
+    storage_duration: float = Form(default=None, description="Storage duration in days"),
+    packaging_type: str = Form(default=None, description="Packaging type"),
 ) -> ExplainResponse:
     contents = await file.read()
     image = _open_image(contents)
@@ -223,10 +222,10 @@ async def explain(
 async def inspect(
     request: Request,
     file: UploadFile = File(..., description="Food image to inspect"),
-    temperature: float | None = Form(None, description="Storage temperature °C"),
-    humidity: float | None = Form(None, description="Relative humidity %"),
-    storage_duration: float | None = Form(None, description="Storage duration in days"),
-    packaging_type: str | None = Form(None, description="Packaging type"),
+    temperature: float = Form(default=None, description="Storage temperature °C"),
+    humidity: float = Form(default=None, description="Relative humidity %"),
+    storage_duration: float = Form(default=None, description="Storage duration in days"),
+    packaging_type: str = Form(default=None, description="Packaging type"),
 ) -> InspectResponse:
     contents = await file.read()
     image = _open_image(contents)

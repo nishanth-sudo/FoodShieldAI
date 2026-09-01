@@ -1,19 +1,13 @@
 from __future__ import annotations
 
-# Re-export all classes from the schemas module so that
-# `from aiengine.llm.schemas import InspectionReport, Finding` works
-# regardless of whether this is a package or a single-file module.
-
 from typing import Literal, List, Optional
 from pydantic import BaseModel, Field
-
 
 class Finding(BaseModel):
     """A single finding within the inspection report."""
     area: str = Field(..., description="The area being inspected (e.g., Packaging, Freshness)")
     status: Literal["pass", "fail", "info", "warning"] = Field(..., description="The status of the finding")
     detail: str = Field(..., description="Detailed observation")
-
 
 class InspectionReport(BaseModel):
     """The complete structured inspection report."""
@@ -41,6 +35,3 @@ class InspectionReport(BaseModel):
         default=None,
         description="Name of the LLM model used (e.g., 'llama3.1:8b')",
     )
-
-
-__all__ = ["Finding", "InspectionReport"]

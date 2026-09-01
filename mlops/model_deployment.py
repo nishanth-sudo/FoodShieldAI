@@ -61,6 +61,7 @@ class ModelDeployer:
         return True
 
     def promote_to_production(self, model_name: str, version: str | None = None) -> bool:
+        """Promote a model from staging to production."""
         staging_path = self._get_staging_path(model_name, version)
         if staging_path is None:
             logger.error(f"No staging deployment found for {model_name}")

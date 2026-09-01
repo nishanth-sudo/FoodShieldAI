@@ -1,12 +1,7 @@
 from __future__ import annotations
 
-# Re-export all classes from the prompts module so that
-# `from aiengine.llm.prompts import registry, PromptRegistry, PromptVersion`
-# works regardless of whether this is a package or a single-file module.
-
 from dataclasses import dataclass
 from typing import Dict
-
 
 @dataclass(frozen=True)
 class PromptVersion:
@@ -15,7 +10,6 @@ class PromptVersion:
     template: str
     model_recommendation: str
     provider_recommendation: str
-
 
 class PromptRegistry:
     """
@@ -32,7 +26,7 @@ class PromptRegistry:
             version=version,
             template=template,
             model_recommendation=model,
-            provider_recommendation=provider,
+            provider_recommendation=provider
         )
 
     def get(self, prompt_id: str, version: str | None = None) -> PromptVersion:
@@ -47,7 +41,6 @@ class PromptRegistry:
         # Default to the latest version (highest alphanumeric)
         latest_version = sorted(self._prompts[prompt_id].keys())[-1]
         return self._prompts[prompt_id][latest_version]
-
 
 # Global registry instance
 registry = PromptRegistry()
@@ -96,7 +89,7 @@ Return a valid JSON object with these fields:
 - "inspection_date": current date
 """,
     model="llama3.1:8b",
-    provider="ollama",
+    provider="ollama"
 )
 
 # ---------------------------------------------------------------------------
@@ -153,7 +146,7 @@ Return a valid JSON object with these fields:
 - "evidence_summary": one sentence summarising which evidence fields drove the verdict
 """,
     model="llama3.1:8b",
-    provider="ollama",
+    provider="ollama"
 )
 
 # ---------------------------------------------------------------------------
@@ -168,7 +161,5 @@ registry.register(
 
 Summary:""",
     model="llama3.2:3b",
-    provider="ollama",
+    provider="ollama"
 )
-
-__all__ = ["PromptVersion", "PromptRegistry", "registry"]

@@ -1,0 +1,77 @@
+# docker-compose override for running vLLM alongside FoodShieldAI.
+#
+# Usage (GPU):
+#   docker compose -f docker-compose.yml -f docker-compose.vllm.yml up
+#
+# Usage (CPU-only / dev — comment out the `deploy` block below):
+#   docker compose -f docker-compose.yml -f docker-compose.vllm.yml up
+#
+# Environment variables are read from vllm.env (copy from vllm.env.example).
+#
+# Prerequisites:
+#   - The base docker-compose.yml must declare the 'foodshield-net' network.
+#   - For GPU support the NVIDIA Container Toolkit must be installed on the host.
+
+version: "3.9"
+
+services:
+  vllm:
+    image: vllm/vllm-openai:latest
+    env_file:
+      - vllm.env
+    environment:
+      # Individual overrides (these win over vllm.env values)
+      MODEL_NAME: ${MODEL_NAME:-facebook/opt-125m}
+      TENSOR_PARALLEL_SIZE: ${TENSOR_PARALLEL_SIZE:-1}
+      GPU_MEMORY_UTILIZATION: ${GPU_MEMORY_UTILIZATION:-0.8}
+    command:
+      - "--model"
+      - "${MODEL_NAME:-facebook/opt-125m}"
+      - "--tensor-parallel-size"
+      - "${TENSOR_PARALLEL_SIZE:-1}"
+      - "--gpu-memory-utilization"
+      - "${GPU_MEMORY_UTILIZATION:-0.8}"
+      - "--max-model-len"
+      - "${MAX_MODEL_LEN:-2048}"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8000"
+    ports:
+      - "8000:8000"
+    volumes:
+      # Model weight cache — avoids re-downloading on container restart
+      - vllm_model_cache:/root/.cache/huggingface
+    networks:
+      - foodshield-net
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s  # models may take time to load on first start
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    # -------------------------------------------------------------------------
+    # GPU reservation — comment out this entire `deploy` block for CPU-only dev.
+    # Requires NVIDIA Container Toolkit on the host.
+    # -------------------------------------------------------------------------
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: "all"
+              capabilities:
+                - gpu
+
+volumes:
+  vllm_model_cache:
+
+networks:
+  foodshield-net:
+    external: true  # Reuse the network declared in the base docker-compose.yml

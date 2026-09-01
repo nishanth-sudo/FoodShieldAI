@@ -106,11 +106,31 @@ class AIInferenceOrchestrator:
             ollama_model=self.config.get("ollama_xai_model", "llama3.2:3b"),
         )
 
-        # LLM report — Ollama by default
+        # LLM report — provider-based
+        llm_provider_type = self.config.get("llm_provider", "ollama")
+        llm_model = self.config.get("llm_model", "llama3.1:8b")
+
+        if llm_provider_type == "ollama":
+            from aiengine.llm.ollama_provider import OllamaProvider
+            provider = OllamaProvider(model=llm_model)
+        elif llm_provider_type == "vllm":
+            from aiengine.llm.vllm_provider import VLLMProvider
+            provider = VLLMProvider(model=llm_model)
+        elif llm_provider_type == "openai":
+            from aiengine.llm.openai_provider import OpenAIProvider
+            provider = OpenAIProvider(model=llm_model)
+        else:
+            provider = None
+
+        if provider:
+            from aiengine.llm.resilience import ResilientLLMProvider
+            provider = ResilientLLMProvider(provider)
+
         self.report_generator = LLMReportGenerator(
-            model_name=self.config.get("llm_model", "ollama/llama3.1:8b"),
+            provider=provider,
             temperature=self.config.get("llm_temperature", 0.3),
         )
+
 
         # VLM augmentor — opt-in (disabled by default; requires vision model pull)
         self.vlm_augmentor = VisionLLMAugmentor(
@@ -192,7 +212,9 @@ class AIInferenceOrchestrator:
 
         # ── XAI: SHAP + Counterfactual (when environmental context provided) ──
         xai_evidence = {}
-        if environmental_data:
+        # These are currently disabled as there is no trained environmental risk model.
+        # Once a model is available, they will be re-enabled and connected to the actual model.
+        if False and environmental_data:
             shap_result = self._compute_shap(environmental_data, spoilage_result)
             if shap_result:
                 xai_evidence["shap"] = shap_result
@@ -278,7 +300,7 @@ class AIInferenceOrchestrator:
         }
 
         # SHAP + Counterfactuals (when environmental context provided)
-        if environmental_data:
+        if False and environmental_data:
             shap_result = self._compute_shap(environmental_data, spoilage_result)
             if shap_result:
                 result["shap_values"] = shap_result
@@ -344,82 +366,4 @@ class AIInferenceOrchestrator:
     # ------------------------------------------------------------------
     # Private XAI helpers
     # ------------------------------------------------------------------
-
-    def _compute_shap(
-        self, environmental_data: dict, spoilage_result: dict,
-    ) -> dict | None:
-        """Compute SHAP feature contributions using environmental data."""
-        try:
-            numeric_features = {
-                k: v for k, v in environmental_data.items()
-                if v is not None and isinstance(v, (int, float))
-            }
-            if not numeric_features:
-                return None
-
-            feature_names = list(numeric_features.keys())
-
-            def _risk_predict(feature_dicts: list[dict]) -> list[float]:
-                """Simple risk model based on environmental factors."""
-                results = []
-                for fd in feature_dicts:
-                    base = spoilage_result.get("spoilage_score", 0.5)
-                    temp = fd.get("temperature", 20)
-                    humidity = fd.get("humidity", 50)
-                    duration = fd.get("storage_duration", 0)
-                    # Increase risk with higher temp, humidity, and duration
-                    risk = base + (temp - 20) * 0.01 + (humidity - 50) * 0.005 + duration * 0.02
-                    results.append(max(0.0, min(1.0, risk)))
-                return results
-
-            explainer = SHAPExplainer(
-                feature_names=feature_names,
-                predict_func=_risk_predict,
-            )
-            return explainer.explain(numeric_features)
-
-        except Exception as exc:
-            logger.warning("SHAP computation failed: %s", exc)
-            return None
-
-    def _compute_counterfactuals(
-        self, environmental_data: dict, spoilage_result: dict,
-    ) -> list[dict] | None:
-        """Compute counterfactual scenarios for risk reduction."""
-        try:
-            numeric_features = {
-                k: v for k, v in environmental_data.items()
-                if v is not None and isinstance(v, (int, float))
-            }
-            if not numeric_features:
-                return None
-
-            constraints = {
-                k: v for k, v in self._cf_feature_constraints.items()
-                if k in numeric_features
-            }
-            if not constraints:
-                return None
-
-            def _risk_predict(features: dict) -> float:
-                """Simple risk model based on environmental factors."""
-                base = spoilage_result.get("spoilage_score", 0.5)
-                temp = features.get("temperature", 20)
-                humidity = features.get("humidity", 50)
-                duration = features.get("storage_duration", 0)
-                risk = base + (temp - 20) * 0.01 + (humidity - 50) * 0.005 + duration * 0.02
-                return max(0.0, min(1.0, risk))
-
-            explainer = CounterfactualExplainer(
-                predict_func=_risk_predict,
-                feature_constraints=constraints,
-            )
-            return explainer.generate_counterfactuals(
-                current_features=numeric_features,
-                target_threshold=0.34,  # low risk threshold
-                n_counterfactuals=3,
-            )
-
-        except Exception as exc:
-            logger.warning("Counterfactual computation failed: %s", exc)
-            return None
+    pass

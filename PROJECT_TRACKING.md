@@ -170,6 +170,30 @@ This file tracks the complete development progress of the FoodShield AI system. 
 
 ---
 
+## Phase 12: Spec Remediation & Engineering Hardening (Aug 2026)
+
+| # | Task | Status | Completed | Notes |
+|---|------|--------|-----------|-------|
+| 12.1 | Fix `Any` import in `domain/models.py` OCRResult | ✅ | 2026-08-31 | Added `from typing import Any` |
+| 12.2 | Convert `EnvironmentalData` to Pydantic with Field validators | ✅ | 2026-08-31 | `Field(ge=-50, le=100)` temp; `Field(ge=0, le=100)` humidity; `Field(ge=0)` duration |
+| 12.3 | Add `ModelVersion` dataclass | ✅ | 2026-08-31 | `aiengine/domain/models.py` |
+| 12.4 | Add `InspectionLineage` dataclass | ✅ | 2026-08-31 | Audit trail per spec §27, §28 |
+| 12.5 | Create centralized `Settings(BaseSettings)` | ✅ | 2026-08-31 | `aiengine/config.py` — replaces scattered `os.getenv()` per spec §20 |
+| 12.6 | Create `LLMProvider` factory module | ✅ | 2026-08-31 | `aiengine/llm/factory.py` — registry pattern, no if/elif chain per spec §16 |
+| 12.7 | Add grounding-safe prompt v2.0 | ✅ | 2026-08-31 | `aiengine/llm/prompts/__init__.py` v2.0 — 6 safety constraints per spec §12 |
+| 12.8 | Extend `InspectionReport` with traceability fields | ✅ | 2026-08-31 | `evidence_summary`, `prompt_version`, `llm_provider`, `llm_model` per spec §13 |
+| 12.9 | Create `RiskModel` Protocol | ✅ | 2026-08-31 | `aiengine/domain/protocols.py` — ensures XAI targets actual model per spec §5 |
+| 12.10 | Create `InspectionService` (SRP CV pipeline) | ✅ | 2026-08-31 | `aiengine/application/inspection_service.py` per spec §17 |
+| 12.11 | Create `ExplanationService` (SRP XAI) | ✅ | 2026-08-31 | `aiengine/application/explanation_service.py` per spec §17 |
+| 12.12 | Create `ReportService` (SRP LLM report) | ✅ | 2026-08-31 | `aiengine/application/report_service.py` per spec §17 |
+| 12.13 | Create `HealthChecker` module | ✅ | 2026-08-31 | `aiengine/serving/health.py` — vLLM + Ollama + API health per spec §38 |
+| 12.14 | Create vLLM docker-compose override | ✅ | 2026-08-31 | `infrastructure/docker/docker-compose.vllm.yml` — GPU, cache volume, healthcheck per spec §10 |
+| 12.15 | Create vLLM env example | ✅ | 2026-08-31 | `infrastructure/docker/vllm.env.example` |
+| 12.16 | XAI correctness tests | ✅ | 2026-08-31 | `tests/unit/test_xai_correctness.py` — GradCAM, SHAP, CF per spec §46 |
+| 12.17 | LLM provider tests | ✅ | 2026-08-31 | `tests/unit/test_llm_providers.py` — circuit breaker, schema, hallucination per spec §47 |
+
+---
+
 ## Summary
 
 | Phase | Total Tasks | Completed | In Progress | Pending |
@@ -185,4 +209,5 @@ This file tracks the complete development progress of the FoodShield AI system. 
 | 9. Future Enhancements | 6 | 0 | 0 | 6 |
 | 10. Hardening & Code Quality | 9 | 9 | 0 | 0 |
 | 11. Ollama Integration | 8 | 8 | 0 | 0 |
-| **Total** | **90** | **77** | **1** | **12** |
+| 12. Spec Remediation | 17 | 17 | 0 | 0 |
+| **Total** | **107** | **94** | **1** | **12** |
